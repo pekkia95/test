@@ -1,20 +1,81 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>ExtraTV Live (Ultra-min)</title>
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ExtraTV Live – Simple</title>
   <style>
-    html, body { margin:0; height:100%; background:#000; }
-    video { width:100vw; height:100vh; object-fit:contain; background:#000; }
+    html,body{margin:0;height:100%;background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    .wrap{display:grid;place-items:center;height:100vh}
+    video{width:100vw;height:100vh;object-fit:contain;background:#000}
+    .bar{position:fixed;left:0;right:0;top:0;padding:8px 12px;background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0));display:flex;gap:8px;align-items:center}
+    .status{margin-left:auto;font-size:12px;opacity:.85}
+    .controls{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:10px}
+    .btn{border:0;border-radius:999px;padding:10px 14px;background:#fff;color:#000;cursor:pointer}
+    .ghost{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25)}
+    .hidden{display:none!important}
   </style>
 </head>
 <body>
-  <video autoplay muted playsinline webkit-playsinline controls x-webkit-airplay="allow" airplay="allow">
-    <source src="https://proud-wave-a54c.pekkia95.workers.dev/live/extratvlive/index.m3u8" type="application/vnd.apple.mpegurl">
-  </video>
+  <div class="bar">
+    <strong>📺 ExtraTV Live</strong>
+    <div class="status" id="status">Pronto</div>
+  </div>
+
+  <div class="wrap">
+    <video id="video" autoplay muted playsinline webkit-playsinline preload="metadata" controls></video>
+  </div>
+
+  <div class="controls">
+    <button id="unmute" class="btn">🔊 Attiva audio</button>
+    <button id="play" class="btn ghost hidden">▶︎ Riproduci</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    const SRC = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+    const video = document.getElementById('video');
+    const unmute = document.getElementById('unmute');
+    const playBtn = document.getElementById('play');
+    const statusEl = document.getElementById('status');
+
+    function setStatus(t){ statusEl.textContent = t; }
+    function seekLive(){ try{ if(video.seekable && video.seekable.length){ const end=video.seekable.end(video.seekable.length-1); if(isFinite(end)) video.currentTime=Math.max(0,end-0.5); } }catch(e){} }
+
+    async function start(){
+      setStatus('Connessione…');
+      // Safari/iOS supporta nativamente HLS
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = SRC;
+        seekLive();
+        try { await video.play(); } catch { playBtn.classList.remove('hidden'); }
+        setStatus('In riproduzione');
+        return;
+      }
+      // Altri browser: hls.js
+      if (window.Hls && Hls.isSupported()) {
+        const hls = new Hls({ enableWorker:true, lowLatencyMode:true, maxBufferLength:20, liveBackBufferLength:30 });
+        hls.on(Hls.Events.ERROR, (evt, data) => {
+          if (data.fatal) {
+            switch(data.type){
+              case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+              case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+              default: hls.destroy(); setStatus('Errore fatale');
+            }
+          }
+        });
+        hls.loadSource(SRC);
+        hls.attachMedia(video);
+        video.addEventListener('loadedmetadata', () => video.play().catch(()=>{ playBtn.classList.remove('hidden'); }));
+        setStatus('In riproduzione');
+      } else {
+        setStatus('Browser non supporta HLS');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', start);
+    unmute.addEventListener('click', async () => { try{ video.muted=false; await video.play(); unmute.classList.add('hidden'); }catch{} });
+    playBtn.addEventListener('click', async () => { try{ await video.play(); playBtn.classList.add('hidden'); }catch{} });
+  </script>
 </body>
 </html>
