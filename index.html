@@ -49,6 +49,7 @@
 
         .container {
             width: 100%;
+            max-width: 600px;
             padding: 1rem;
             background-color: #ffffff;
             display: flex;
@@ -181,10 +182,12 @@
         <p class="text-xl font-bold text-gray-600 dark:text-gray-400">Streaming dal vivo, sempre con te.</p>
 
         <div class="video-container">
-            <video id="video" class="video-player" muted playsinline>
+            <video id="video" class="video-player" muted playsinline controls>
                 Il tuo browser non supporta il tag video.
             </video>
         </div>
+
+        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">Per la modalità Schermo Intero, tocca il video e usa i controlli integrati del tuo dispositivo.</p>
 
         <div class="button-group">
             <button id="main-button" class="app-button primary">
@@ -346,6 +349,7 @@
                     showMessage("Il PiP non è supportato dal tuo dispositivo.");
                 }
             });
+
 
             // Sincronizza lo stato del pulsante se l'utente usa i controlli nativi del player
             video.addEventListener('volumechange', updateMainButton);
