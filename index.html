@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ExtraTV Live</title>
+  <meta name="theme-color" content="#111">
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    html, body {
+      margin: 0; height: 100%; background: #000; color: #fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+    .wrap {
+      display: grid; place-items: center; height: 100vh; padding: 0; box-sizing: border-box;
+    }
+    video {
+      width: 100vw; height: 100vh; object-fit: contain; background: #000;
+    }
+    .overlay {
+      position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.6);
+      opacity: 1; transition: opacity .2s ease;
+    }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+    .btn {
+      border: 0; padding: 14px 22px; font-size: 18px; border-radius: 999px; cursor: pointer;
+    }
+    .topbar {
+      position: fixed; left: 0; right: 0; top: 0; display: flex; gap: 8px; align-items: center;
+      padding: 10px; background: linear-gradient(180deg, rgba(0,0,0,.7), rgba(0,0,0,0));
+    }
+    .status { margin-left: auto; font-size: 12px; opacity: .8; }
+    a { color: #9cf; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span>📺 ExtraTV Live</span>
+    <div class="status" id="status">Pronto</div>
+  </div>
+  <div class="wrap">
+    <video id="video" controls playsinline webkit-playsinline preload="metadata" poster="poster.png"></video>
+  </div>
+
+  <div id="overlay" class="overlay">
+    <button id="playBtn" class="btn">▶︎ Riproduci</button>
+  </div>
+
+  <!-- hls.js via CDN (no framework needed) -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    const streamURL = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const playBtn = document.getElementById('playBtn');
+    const statusEl = document.getElementById('status');
+
+    function setStatus(txt) { statusEl.textContent = txt; }
+
+    async function startPlayback() {
+      overlay.classList.add('hidden');
+      setStatus('Connessione…');
+      try {
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            // You can tweak these if the connection is unstable
+            maxBufferLength: 20,
+            liveBackBufferLength: 30,
+            enableWorker: true,
+            lowLatencyMode: true
+          });
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            console.warn('HLS error:', data);
+            if (data.fatal) {
+              switch(data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                default: hls.destroy(); setStatus('Errore fatale'); break;
+              }
+            }
+          });
+          hls.loadSource(streamURL);
+          hls.attachMedia(video);
+          video.addEventListener('loadedmetadata', () => video.play().catch(()=>{}));
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          // Safari (iOS/iPadOS/macOS) support nativo HLS
+          video.src = streamURL;
+          await video.play();
+        } else {
+          setStatus('Il tuo browser non supporta HLS');
+          overlay.classList.remove('hidden');
+        }
+        setStatus('In riproduzione');
+      } catch (err) {
+        console.error(err);
+        setStatus('Tocca "Riproduci" per avviare');
+        overlay.classList.remove('hidden');
+      }
+    }
+
+    // Autoplay su dispositivi che lo permettono, altrimenti serve interazione
+    document.addEventListener('DOMContentLoaded', () => {
+      // Evita autoplay forzato su iOS: aspetta gesto
+      if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        startPlayback();
+      }
+    });
+
+    playBtn.addEventListener('click', startPlayback);
+
+    // Registra il Service Worker per l'installazione come PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js').catch(console.warn);
+    }
+  </script>
+</body>
+</html>
