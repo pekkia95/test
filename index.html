@@ -1,83 +1,158 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>ExtraTV Live</title>
-  <!-- NIENTE manifest, NIENTE apple-mobile-web-app-capable: si apre sempre in Safari -->
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-  <meta name="format-detection" content="telephone=no">
   <style>
     :root { --bg:#000; --fg:#fff; }
     html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
     .wrap { display:grid; place-items:center; height:100vh; }
     video { width:100vw; height:100vh; object-fit:contain; background:#000; }
-    .topbar { position:fixed; left:0; right:0; top:0; padding:10px; background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0)); display:flex; gap:8px; align-items:center; z-index:5; }
+    .bar { position:fixed; left:0; right:0; top:0; padding:8px 12px; background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0)); display:flex; gap:8px; align-items:center; z-index:5; }
     .status { margin-left:auto; font-size:12px; opacity:.85; }
-    .splash { position:fixed; inset:0; display:grid; place-items:center; background:#000; color:#fff; z-index:10; animation: splashFade 1.2s ease 1.2s forwards; }
-    .splash-inner{ text-align:center; display:grid; gap:12px; place-items:center; }
-    .logo{ width:120px; height:120px; border-radius:24px; background:#111; display:grid; place-items:center; box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size:54px; }
-    .title{ font-size:22px; font-weight:700; letter-spacing:.4px; }
-    @keyframes splashFade { to { opacity:0; visibility:hidden; } }
-    .controls { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:6; }
+    .controls { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:6; }
     .btn { border:0; padding:12px 16px; font-size:16px; border-radius:999px; cursor:pointer; }
     .btn-primary { background:#fff; color:#000; }
+    .btn-ghost { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.25); }
+    .splash { position:fixed; inset:0; display:grid; place-items:center; background:#000; color:#fff; z-index:10; animation: splashFade 1.1s ease 1.2s forwards; }
+    .splash-inner { text-align:center; display:grid; gap:12px; place-items:center; }
+    .logo { width:120px; height:120px; border-radius:24px; background:#111; display:grid; place-items:center; box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size:54px; }
+    .title { font-size:22px; font-weight:700; letter-spacing:.4px; }
+    @keyframes splashFade { to { opacity:0; visibility:hidden; } }
+    .hidden { display:none !important; }
+    @supports (padding: env(safe-area-inset-bottom)) {
+      .controls { padding-bottom: calc(env(safe-area-inset-bottom) + 8px); }
+    }
   </style>
 </head>
 <body>
-  <!-- Splash screen -->
-  <div class="splash">
+  <!-- Splash -->
+  <div class="splash" id="splash">
     <div class="splash-inner">
       <div class="logo">▶︎</div>
       <div class="title">ExtraTV Live</div>
     </div>
   </div>
 
-  <div class="topbar">
-    <span>📺 ExtraTV Live</span>
+  <div class="bar">
+    <strong>📺 ExtraTV Live</strong>
     <div class="status" id="status">Pronto</div>
   </div>
 
   <div class="wrap">
     <video id="video" autoplay muted playsinline webkit-playsinline preload="metadata" controls>
-      <source id="srcHLS" src="https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8" type="application/vnd.apple.mpegurl" />
+      <source id="srcHLS" src="https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8" type="application/vnd.apple.mpegurl">
     </video>
   </div>
 
   <div class="controls">
     <button id="muteToggle" class="btn btn-primary">🔊 Attiva audio</button>
+    <button id="pipBtn" class="btn btn-ghost">⿻ PiP</button>
   </div>
 
+  <!-- hls.js per browser non-Safari -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
+    const SRC = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
     const video = document.getElementById('video');
-    const btn = document.getElementById('muteToggle');
+    const source = document.getElementById('srcHLS');
+    const muteToggle = document.getElementById('muteToggle');
+    const pipBtn = document.getElementById('pipBtn');
     const statusEl = document.getElementById('status');
-    function setStatus(t){ statusEl.textContent = t; }
-    function bust(u){ return u + (u.includes('?')?'&':'?') + 'v=' + Date.now(); }
-    function seekLiveEdge(){ try { if (video.seekable && video.seekable.length) { const end = video.seekable.end(video.seekable.length-1); if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.5); } } catch(_){} }
-    function updateBtn(){ btn.textContent = (video.muted ? '🔊 Attiva audio' : '🔇 Disattiva audio'); }
+    const splash = document.getElementById('splash');
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      const s = document.getElementById('srcHLS');
-      s.src = bust(s.src);
-      video.load();
-      try { seekLiveEdge(); await video.play(); setStatus('In riproduzione (muto)'); } catch(e) { setStatus('Premi ▶︎ per avviare'); }
-      updateBtn();
-    });
-
-    btn.addEventListener('click', async () => {
+    function setStatus(t) { statusEl.textContent = t; }
+    function bust(u) { return u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now(); }
+    function seekLive() {
       try {
-        if (video.muted) {
-          video.muted = false;
-          await video.play().catch(()=>{});
-          setStatus('In riproduzione');
-        } else {
-          video.muted = true;
-          setStatus('In riproduzione (muto)');
+        if (video.seekable && video.seekable.length) {
+          const end = video.seekable.end(video.seekable.length - 1);
+          if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.5);
         }
-        updateBtn();
-      } catch(e) { console.warn('toggle failed', e); }
+      } catch(_ ){}
+    }
+    function updateMuteBtn() {
+      muteToggle.textContent = video.muted ? '🔊 Attiva audio' : '🔇 Disattiva audio';
+    }
+
+    async function setupAndPlay() {
+      // cache-busting iniziale
+      source.src = bust(SRC);
+      // Non-Safari: usa hls.js
+      if (!video.canPlayType('application/vnd.apple.mpegurl') && window.Hls && Hls.isSupported()) {
+        try {
+          const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20, liveBackBufferLength: 30 });
+          hls.on(Hls.Events.ERROR, (evt, data) => {
+            if (data.fatal) {
+              switch(data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                default: try { hls.destroy(); } catch(_ ){}; setStatus('Errore HLS');
+              }
+            }
+          });
+          hls.loadSource(source.src);
+          hls.attachMedia(video);
+        } catch(e) {
+          console.warn('hls.js init error', e);
+        }
+      }
+      video.load();
+      try {
+        seekLive();
+        await video.play();
+        setStatus('In riproduzione (muto)');
+      } catch(e) {
+        setStatus('Premi ▶︎ per avviare');
+      }
+      updateMuteBtn();
+    }
+
+    // Avvio
+    document.addEventListener('DOMContentLoaded', setupAndPlay);
+
+    // Splash: già ha animazione, ma assicuriamo l'hide dopo 2.5s
+    setTimeout(() => splash.classList.add('hidden'), 2500);
+
+    // Toggle audio
+    muteToggle.addEventListener('click', async () => {
+      try {
+        video.muted = !video.muted;
+        if (!video.muted && video.paused) { await video.play().catch(()=>{}); }
+        setStatus(video.muted ? 'In riproduzione (muto)' : 'In riproduzione');
+        updateMuteBtn();
+      } catch(e) { console.warn('toggle mute failed', e); }
     });
+
+    // Picture-in-Picture
+    pipBtn.addEventListener('click', async () => {
+      try {
+        if ('pictureInPictureEnabled' in document && typeof video.requestPictureInPicture === 'function') {
+          if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+          } else {
+            await video.requestPictureInPicture();
+          }
+        } else if (typeof video.webkitSetPresentationMode === 'function' &&
+                   video.webkitSupportsPresentationMode &&
+                   video.webkitSupportsPresentationMode('picture-in-picture')) {
+          const mode = video.webkitPresentationMode;
+          video.webkitSetPresentationMode(mode === 'picture-in-picture' ? 'inline' : 'picture-in-picture');
+        } else {
+          alert('PiP non supportato su questo dispositivo/browser.');
+        }
+      } catch(e) { console.warn('PiP error', e); }
+    });
+
+    // Watchdog anti-stallo
+    setTimeout(() => {
+      if (video.readyState < 3 || video.currentTime === 0) {
+        try { video.pause(); } catch(_ ){}
+        seekLive();
+        setTimeout(() => video.play().catch(()=>{}), 180);
+      }
+    }, 2200);
   </script>
 </body>
 </html>
