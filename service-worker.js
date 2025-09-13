@@ -1,6 +1,5 @@
-// Service Worker minimale per PWA su GitHub Pages (project path compatibile)
-// NB: lo streaming HLS non è disponibile offline; qui cache solo shell.
-const CACHE = 'extratv-shell-v3';
+// Service Worker minimale per PWA su GitHub Pages
+const CACHE = 'extratv-shell-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -20,7 +19,6 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  // non intercettare HLS e media
   if (url.pathname.endsWith('.m3u8') || url.pathname.endsWith('.ts') || url.pathname.endsWith('.mp4')) return;
   e.respondWith(
     caches.match(e.request).then(res => res || fetch(e.request).catch(() => caches.match('./index.html')))

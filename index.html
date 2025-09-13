@@ -47,7 +47,7 @@
     <div class="splash-inner">
       <div class="logo">▶︎</div>
       <div class="title">ExtraTV Live</div>
-      <div class="note">Avvio in corso…</div>
+      <div class="note">Caricamento…</div>
     </div>
   </div>
 
@@ -92,32 +92,31 @@
           });
           hls.loadSource(streamURL);
           hls.attachMedia(video);
-          video.addEventListener('loadedmetadata', () => video.play().catch(()=>{}));
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = streamURL;
-          await video.play();
         } else {
           setStatus('Browser non supporta HLS');
           overlay.classList.remove('hidden');
         }
-        setStatus('In riproduzione');
+        setStatus('Pronto');
       } catch(e){
         console.error(e);
-        setStatus('Tocca "Riproduci" per avviare');
+        setStatus('Errore');
         overlay.classList.remove('hidden');
       }
     }
 
-    // Avvio dopo 3 secondi (manteniamo il pulsante come fallback)
     document.addEventListener('DOMContentLoaded', () => {
+      // Nasconde splash dopo 2s e carica player
       setTimeout(() => {
         hideSplash();
         startPlayback();
-      }, 3000);
+      }, 2000);
     });
+
     playBtn.addEventListener('click', () => { hideSplash(); startPlayback(); });
 
-    // Service Worker con path dinamico per GitHub Pages
+    // Service Worker per GitHub Pages
     if ('serviceWorker' in navigator) {
       const parts = location.pathname.split('/').filter(Boolean);
       const base = parts.length ? '/' + parts[0] + '/' : '/';
