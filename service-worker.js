@@ -1,5 +1,5 @@
-// Service Worker minimale per PWA su GitHub Pages
-const CACHE = 'extratv-shell-v5';
+// Service Worker minimale per PWA (disabilitato in iOS standalone via JS)
+const CACHE = 'extratv-shell-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -25,7 +25,5 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (url.pathname.endsWith('.m3u8') || url.pathname.endsWith('.ts') || url.pathname.endsWith('.mp4')) return;
-  e.respondWith(
-    caches.match(e.request).then(res => res || fetch(e.request).catch(() => caches.match('./index.html')))
-  );
+  e.respondWith(caches.match(e.request).then(res => res || fetch(e.request).catch(() => caches.match('./index.html'))));
 });
