@@ -322,14 +322,24 @@
 
             // Event listener per il pulsante PiP
             pipButton.addEventListener('click', () => {
+                // Assicurati che il video stia riproducendo prima di provare il PiP
                 if (document.pictureInPictureEnabled) {
                     if (document.pictureInPictureElement) {
                         document.exitPictureInPicture().catch(error => {
                             console.error("Exit PiP failed:", error);
                         });
                     } else {
+                        // Se il video è in pausa, prova a riprodurlo prima
+                        if (video.paused) {
+                            video.play().catch(error => {
+                                console.error("Play failed before PiP request:", error);
+                                showMessage("Impossibile riprodurre il video. Riprova.");
+                                return;
+                            });
+                        }
                         video.requestPictureInPicture().catch(error => {
                             console.error("PiP failed:", error);
+                            showMessage("Impossibile entrare in modalità Schermo-in-Schermo. Riprova più tardi.");
                         });
                     }
                 } else {
