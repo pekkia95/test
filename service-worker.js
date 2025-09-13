@@ -1,28 +1,14 @@
-// Service Worker minimale per PWA su GitHub Pages (project path compatibile)
-// NB: lo streaming HLS non è disponibile offline; qui cache solo shell.
-const CACHE = 'extratv-shell-v3';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './icon-192.png',
-  './icon-512.png',
-  './poster.png'
-];
-
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
-});
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(self.clients.claim());
-});
+// SW pass-through: nessun precache e mai cache per index/manifest/poster
+self.addEventListener('install', e => { self.skipWaiting(); });
+self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  // non intercettare HLS e media
+  // Non interferire con i media HLS
   if (url.pathname.endsWith('.m3u8') || url.pathname.endsWith('.ts') || url.pathname.endsWith('.mp4')) return;
-  e.respondWith(
-    caches.match(e.request).then(res => res || fetch(e.request).catch(() => caches.match('./index.html')))
-  );
+  // Evita cache per index/manifest/poster
+  if (url.pathname.endsWith('/') || url.pathname.endsWith('/index.html') || url.pathname.endsWith('manifest.webmanifest') || url.pathname.endsWith('poster.png')) {
+    e.respondWith(fetch(e.request, { cache: 'no-store' }));
+  }
+  // altrimenti passa default (rete)
 });
