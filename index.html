@@ -18,6 +18,8 @@
     .overlay { position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.6); opacity:1; transition:opacity .2s; z-index:4; }
     .overlay.hidden { opacity:0; pointer-events:none; }
     .btn { border:0; padding:14px 22px; font-size:18px; border-radius:999px; cursor:pointer; }
+    .btn-outline { background:transparent; color:#fff; border:1px solid #777; }
+    .stack { display:grid; gap:10px; }
     .splash { position:fixed; inset:0; display:grid; place-items:center; background:#000; color:#fff; z-index:10; animation: splashFade 1.2s ease 1.2s forwards; }
     .splash-inner{ text-align:center; display:grid; gap:12px; place-items:center; }
     .logo{ width:120px; height:120px; border-radius:24px; background:#111; display:grid; place-items:center; box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size:54px; }
@@ -40,11 +42,14 @@
     <div class="status" id="status">Pronto</div>
   </div>
   <div class="wrap">
-    <video id="video" controls playsinline webkit-playsinline preload="none" x-webkit-airplay="allow" airplay="allow"></video>
+    <video id="video" controls playsinline webkit-playsinline preload="none"></video>
   </div>
 
   <div id="overlay" class="overlay">
-    <button id="playBtn" class="btn">▶︎ Riproduci</button>
+    <div class="stack">
+      <button id="playBtn" class="btn">▶︎ Riproduci qui</button>
+      <a id="openSystem" class="btn btn-outline" href="#" rel="noopener">Apri nel player di sistema</a>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -53,13 +58,13 @@
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
     const playBtn = document.getElementById('playBtn');
+    const openSystem = document.getElementById('openSystem');
     const statusEl = document.getElementById('status');
 
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
     function setStatus(t){ statusEl.textContent = t; }
-
     function seekLiveEdge() {
       try {
         if (video.seekable && video.seekable.length) {
@@ -71,32 +76,14 @@
       } catch(e){}
     }
 
-    function nudgePlayCycle() {
-      // Piccolo ciclo per sbloccare eventuale frame freeze
-      seekLiveEdge();
-      video.pause();
-      setTimeout(async () => {
-        seekLiveEdge();
-        try { await video.play(); } catch(e) {}
-      }, 150);
-    }
-
     async function startIOSNative() {
       setStatus('Carico sorgente…');
-      // Forza una URL unica per evitare poster/freeze caching
       video.src = streamURL + (streamURL.includes('?')?'&':'?') + 't=' + Date.now();
       video.load();
-      // Attendi metadata, poi cerca live edge e play
       const onLoadedMeta = async () => {
         video.removeEventListener('loadedmetadata', onLoadedMeta);
         seekLiveEdge();
         try { await video.play(); } catch(e) {}
-        // Se resta fermo, prova a nudge
-        setTimeout(() => {
-          if (video.readyState < 3 || video.currentTime === 0) {
-            nudgePlayCycle();
-          }
-        }, 2500);
       };
       video.addEventListener('loadedmetadata', onLoadedMeta);
     }
@@ -125,6 +112,13 @@
       }
     }
 
+    // Pulsante 'Apri nel player di sistema'
+    openSystem.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Navigate direttamente alla playlist: iOS la apre in AVPlayer / QuickTime esterno
+      window.location.href = streamURL;
+    });
+
     playBtn.addEventListener('click', async () => {
       overlay.classList.add('hidden');
       if (isIOS) {
@@ -136,22 +130,24 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       if (!isIOS) {
-        // comportamento v2: autoplay su non iOS
+        // autoplay come v2 su non iOS
         (async () => { try { await startNonIOS(); } catch{} })();
         overlay.classList.add('hidden');
       } else {
-        setStatus('iOS: premi ▶︎');
+        setStatus(isStandalone ? 'iOS Web App: puoi aprire nel player di sistema se resta fermo' : 'iOS: premi ▶︎');
+        // In iOS standalone offriamo subito il link al player di sistema
+        if (isStandalone) {
+          overlay.classList.remove('hidden');
+        }
       }
     });
 
-    // Service Worker: non registrarlo in iOS standalone
+    // Service Worker: ok ovunque (se hai dubbi, si può disattivare su iOS standalone)
     if ('serviceWorker' in navigator) {
-      if (!(isIOS && isStandalone)) {
-        const parts = location.pathname.split('/').filter(Boolean);
-        const base = parts.length ? '/' + parts[0] + '/' : '/';
-        const swUrl = base + 'service-worker.js';
-        navigator.serviceWorker.register(swUrl).catch(console.warn);
-      }
+      const parts = location.pathname.split('/').filter(Boolean);
+      const base = parts.length ? '/' + parts[0] + '/' : '/';
+      const swUrl = base + 'service-worker.js';
+      navigator.serviceWorker.register(swUrl).catch(console.warn);
     }
   </script>
 </body>
