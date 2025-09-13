@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stream TV</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         body {
@@ -104,21 +103,9 @@
                     actionButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
                 }
             }
-
-            // Gestione del flusso HLS con hls.js
-            if (Hls.isSupported()) {
-                const hls = new Hls();
-                hls.loadSource(videoUrl);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    updateButton();
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Fallback per il supporto nativo (es. in Safari)
-                video.src = videoUrl;
-            } else {
-                showMessage('Il tuo browser non supporta lo streaming HLS.');
-            }
+            
+            // Imposta la sorgente video e gestisce la riproduzione nativa
+            video.src = videoUrl;
 
             // Event listener per il pulsante
             actionButton.addEventListener('click', () => {
@@ -128,7 +115,7 @@
                         updateButton();
                     }).catch(error => {
                         console.error("Play failed:", error);
-                        showMessage("Riproduzione fallita. Il browser ha bloccato l'azione.");
+                        showMessage("Riproduzione fallita. Potrebbe esserci un blocco di sicurezza.");
                     });
                 } else {
                     video.muted = !video.muted;
