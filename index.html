@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ExtraTV Live</title>
-  <!-- NIENTE manifest, NIENTE apple-mobile-web-app-capable: così l'icona Home apre sempre in Safari -->
+  <!-- NIENTE manifest, NIENTE apple-mobile-web-app-capable: si apre sempre in Safari -->
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <meta name="format-detection" content="telephone=no">
   <style>
@@ -45,26 +45,38 @@
   </div>
 
   <div class="controls">
-    <button id="unmuteBtn" class="btn btn-primary">🔊 Attiva audio</button>
+    <button id="muteToggle" class="btn btn-primary">🔊 Attiva audio</button>
   </div>
 
   <script>
     const video = document.getElementById('video');
-    const unmuteBtn = document.getElementById('unmuteBtn');
+    const btn = document.getElementById('muteToggle');
     const statusEl = document.getElementById('status');
     function setStatus(t){ statusEl.textContent = t; }
     function bust(u){ return u + (u.includes('?')?'&':'?') + 'v=' + Date.now(); }
     function seekLiveEdge(){ try { if (video.seekable && video.seekable.length) { const end = video.seekable.end(video.seekable.length-1); if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.5); } } catch(_){} }
+    function updateBtn(){ btn.textContent = (video.muted ? '🔊 Attiva audio' : '🔇 Disattiva audio'); }
 
     document.addEventListener('DOMContentLoaded', async () => {
       const s = document.getElementById('srcHLS');
-      s.src = bust(s.src); // cache-busting
+      s.src = bust(s.src);
       video.load();
       try { seekLiveEdge(); await video.play(); setStatus('In riproduzione (muto)'); } catch(e) { setStatus('Premi ▶︎ per avviare'); }
+      updateBtn();
     });
 
-    unmuteBtn.addEventListener('click', async () => {
-      try { video.muted = false; await video.play(); setStatus('In riproduzione'); } catch(e) { console.warn('unmute failed', e); }
+    btn.addEventListener('click', async () => {
+      try {
+        if (video.muted) {
+          video.muted = false;
+          await video.play().catch(()=>{});
+          setStatus('In riproduzione');
+        } else {
+          video.muted = true;
+          setStatus('In riproduzione (muto)');
+        }
+        updateBtn();
+      } catch(e) { console.warn('toggle failed', e); }
     });
   </script>
 </body>
