@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Extra TV Live</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+    body{font-family:'Inter',sans-serif;background:#f3f4f6;display:flex;justify-content:center;align-items:center;min-height:100vh;color:#1f2937;}
+    .container{max-width:800px;width:100%;margin:1rem;padding:1.5rem;background:#fff;border-radius:1.5rem;box-shadow:0 10px 15px -3px #0001,0 4px 6px -2px #0001;display:flex;flex-direction:column;gap:1rem;text-align:center}
+    .video-container{position:relative;width:100%;padding-top:56.25%;border-radius:1rem;overflow:hidden;box-shadow:0 4px 6px -1px #0001,0 2px 4px -1px #0001}
+    .video-player{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-3xl font-bold">Extra TV Live</h1>
+    <p class="text-gray-600">Streaming dal vivo in corso.</p>
+
+    <div class="video-container">
+      <video id="video" class="video-player" autoplay muted controls playsinline webkit-playsinline>
+        Il tuo browser non supporta il tag video.
+      </video>
+    </div>
+
+    <div class="flex flex-wrap gap-2 justify-center">
+      <button id="mute-button" class="px-4 py-3 rounded-lg text-white font-bold bg-blue-500 hover:bg-blue-600">
+        Attiva audio
+      </button>
+      <button id="retry-button" class="px-4 py-3 rounded-lg font-semibold bg-white border border-gray-300 hover:bg-gray-50">
+        ⟲ Riprova
+      </button>
+    </div>
+
+    <p id="message-display" class="mt-2 text-sm text-gray-500"></p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const video = document.getElementById('video');
+      const muteButton = document.getElementById('mute-button');
+      const retryButton = document.getElementById('retry-button');
+      const messageDisplay = document.getElementById('message-display');
+
+      // URL del flusso (puoi sostituirlo con il tuo proxy se serve)
+      const VIDEO_URL = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+
+      // Utilità
+      function bust(u){ return u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now(); }
+      function showMessage(msg, ms=3000){ messageDisplay.textContent = msg; if(ms) setTimeout(()=>messageDisplay.textContent='', ms); }
+      function seekLive(){
+        try{
+          if (video.seekable && video.seekable.length){
+            const end = video.seekable.end(video.seekable.length-1);
+            if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.5);
+          }
+        }catch(_){}
+      }
+      function updateMuteButton(){
+        if (video.muted) {
+          muteButton.textContent = 'Attiva audio';
+          muteButton.classList.remove('bg-gray-500','hover:bg-gray-600');
+          muteButton.classList.add('bg-blue-500','hover:bg-blue-600','text-white');
+        } else {
+          muteButton.textContent = 'Disattiva audio';
+          muteButton.classList.remove('bg-blue-500','hover:bg-blue-600');
+          muteButton.classList.add('bg-gray-500','hover:bg-gray-600','text-white');
+        }
+      }
+
+      // Setup HLS
+      let hls = null;
+      function attachHls(){
+        if (window.Hls && Hls.isSupported()) {
+          try {
+            if (hls) { try{ hls.destroy(); }catch(e){} }
+            hls = new Hls({ enableWorker:true, lowLatencyMode:true, maxBufferLength:20, liveBackBufferLength:30 });
+            hls.on(Hls.Events.ERROR, (evt, data) => {
+              if (data.fatal) {
+                switch (data.type) {
+                  case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                  case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                  default: try{ hls.destroy(); }catch(e){}; showMessage('Errore HLS');
+                }
+              }
+            });
+            hls.loadSource(bust(VIDEO_URL));
+            hls.attachMedia(video);
+            video.addEventListener('loadedmetadata', () => {
+              seekLive();
+              video.play().catch(()=> showMessage('Autoplay bloccato. Tocca ▶︎.'));
+            }, { once:true });
+          } catch(e) {
+            console.warn('hls init:', e);
+          }
+          return true;
+        }
+        return false;
+      }
+
+      function attachNative(){
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = bust(VIDEO_URL);
+          video.addEventListener('loadedmetadata', () => {
+            seekLive();
+            video.play().catch(()=> showMessage('Autoplay bloccato. Tocca ▶︎.'));
+          }, { once:true });
+          return true;
+        }
+        return false;
+      }
+
+      async function setup(){
+        const usedHls = attachHls();
+        if (!usedHls) {
+          const usedNative = attachNative();
+          if (!usedNative) showMessage('Questo browser non supporta lo streaming HLS.');
+        }
+      }
+
+      // Watchdog anti-stallo
+      let wd = null;
+      function armWatchdog(){
+        clearTimeout(wd);
+        const cur = video.currentTime || 0;
+        wd = setTimeout(() => {
+          const now = video.currentTime || 0;
+          if (video.readyState < 3 || now <= cur + 0.05) {
+            try{ video.pause(); }catch(_){}
+            seekLive();
+            setTimeout(()=> video.play().catch(()=>{}), 160);
+          }
+        }, 2500);
+      }
+      video.addEventListener('timeupdate', armWatchdog);
+      video.addEventListener('waiting', armWatchdog);
+      video.addEventListener('stalled', armWatchdog);
+
+      // UI
+      updateMuteButton();
+      muteButton.addEventListener('click', async () => {
+        video.muted = !video.muted;
+        if (!video.muted && video.paused) { try{ await video.play(); }catch(_){} }
+        updateMuteButton();
+        showMessage(video.muted ? 'Audio disattivato' : 'Audio attivato');
+      });
+      video.addEventListener('volumechange', updateMuteButton);
+
+      retryButton.addEventListener('click', () => {
+        if (hls && window.Hls && Hls.isSupported()) {
+          try { hls.destroy(); }catch(_){}
+          hls = null;
+          attachHls();
+        } else {
+          video.src = bust(VIDEO_URL);
+          video.load();
+          video.play().catch(()=>{});
+        }
+      });
+
+      // Avvio
+      setup().then(()=> armWatchdog());
+    });
+  </script>
+</body>
+</html>
