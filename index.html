@@ -1,81 +1,93 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>ExtraTV Live – Simple</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ExtraTV Live</title>
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <style>
-    html,body{margin:0;height:100%;background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    .wrap{display:grid;place-items:center;height:100vh}
-    video{width:100vw;height:100vh;object-fit:contain;background:#000}
-    .bar{position:fixed;left:0;right:0;top:0;padding:8px 12px;background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0));display:flex;gap:8px;align-items:center}
-    .status{margin-left:auto;font-size:12px;opacity:.85}
-    .controls{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:10px}
-    .btn{border:0;border-radius:999px;padding:10px 14px;background:#fff;color:#000;cursor:pointer}
-    .ghost{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25)}
-    .hidden{display:none!important}
+    html, body { margin:0; height:100%; background:#000; color:#fff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+    .wrap { display:grid; place-items:center; height:100vh; }
+    video { width:100vw; height:100vh; object-fit:contain; background:#000; }
+    .topbar { position:fixed; left:0; right:0; top:0; padding:10px; background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0)); display:flex; gap:8px; align-items:center; }
+    .status { margin-left:auto; font-size:12px; opacity:.85; }
+    .overlay { position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.6); opacity:1; transition:opacity .2s; }
+    .overlay.hidden { opacity:0; pointer-events:none; }
+    .btn { border:0; padding:14px 22px; font-size:18px; border-radius:999px; cursor:pointer; }
+    a { color:#9cf; }
   </style>
 </head>
 <body>
-  <div class="bar">
-    <strong>📺 ExtraTV Live</strong>
+  <div class="topbar">
+    <span>📺 ExtraTV Live</span>
     <div class="status" id="status">Pronto</div>
   </div>
-
   <div class="wrap">
-    <video id="video" autoplay muted playsinline webkit-playsinline preload="metadata" controls></video>
+    <video id="video" controls playsinline webkit-playsinline preload="metadata" poster="./poster.png"></video>
   </div>
 
-  <div class="controls">
-    <button id="unmute" class="btn">🔊 Attiva audio</button>
-    <button id="play" class="btn ghost hidden">▶︎ Riproduci</button>
+  <div id="overlay" class="overlay">
+    <button id="playBtn" class="btn">▶︎ Riproduci</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
-    const SRC = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+    const streamURL = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
     const video = document.getElementById('video');
-    const unmute = document.getElementById('unmute');
-    const playBtn = document.getElementById('play');
+    const overlay = document.getElementById('overlay');
+    const playBtn = document.getElementById('playBtn');
     const statusEl = document.getElementById('status');
 
     function setStatus(t){ statusEl.textContent = t; }
-    function seekLive(){ try{ if(video.seekable && video.seekable.length){ const end=video.seekable.end(video.seekable.length-1); if(isFinite(end)) video.currentTime=Math.max(0,end-0.5); } }catch(e){} }
 
-    async function start(){
+    async function startPlayback(){
+      overlay.classList.add('hidden');
       setStatus('Connessione…');
-      // Safari/iOS supporta nativamente HLS
-      if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = SRC;
-        seekLive();
-        try { await video.play(); } catch { playBtn.classList.remove('hidden'); }
-        setStatus('In riproduzione');
-        return;
-      }
-      // Altri browser: hls.js
-      if (window.Hls && Hls.isSupported()) {
-        const hls = new Hls({ enableWorker:true, lowLatencyMode:true, maxBufferLength:20, liveBackBufferLength:30 });
-        hls.on(Hls.Events.ERROR, (evt, data) => {
-          if (data.fatal) {
-            switch(data.type){
-              case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-              case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-              default: hls.destroy(); setStatus('Errore fatale');
+      try{
+        if (window.Hls && Hls.isSupported()) {
+          const hls = new Hls({ lowLatencyMode:true, enableWorker:true, maxBufferLength:20, liveBackBufferLength:30 });
+          hls.on(Hls.Events.ERROR, (evt, data) => {
+            if (data.fatal) {
+              switch(data.type){
+                case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                default: setStatus('Errore fatale'); hls.destroy();
+              }
             }
-          }
-        });
-        hls.loadSource(SRC);
-        hls.attachMedia(video);
-        video.addEventListener('loadedmetadata', () => video.play().catch(()=>{ playBtn.classList.remove('hidden'); }));
+          });
+          hls.loadSource(streamURL);
+          hls.attachMedia(video);
+          video.addEventListener('loadedmetadata', () => video.play().catch(()=>{}));
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = streamURL;
+          await video.play();
+        } else {
+          setStatus('Browser non supporta HLS');
+          overlay.classList.remove('hidden');
+        }
         setStatus('In riproduzione');
-      } else {
-        setStatus('Browser non supporta HLS');
+      } catch(e){
+        console.error(e);
+        setStatus('Tocca "Riproduci" per avviare');
+        overlay.classList.remove('hidden');
       }
     }
 
-    document.addEventListener('DOMContentLoaded', start);
-    unmute.addEventListener('click', async () => { try{ video.muted=false; await video.play(); unmute.classList.add('hidden'); }catch{} });
-    playBtn.addEventListener('click', async () => { try{ await video.play(); playBtn.classList.add('hidden'); }catch{} });
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) startPlayback();
+    });
+    playBtn.addEventListener('click', startPlayback);
+
+    if ('serviceWorker' in navigator) {
+      const parts = location.pathname.split('/').filter(Boolean);
+      const base = parts.length ? '/' + parts[0] + '/' : '/';
+      const swUrl = base + 'service-worker.js';
+      navigator.serviceWorker.register(swUrl).catch(console.warn);
+    }
   </script>
 </body>
 </html>
