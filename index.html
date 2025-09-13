@@ -27,14 +27,10 @@
       z-index:30;
       transition: opacity .6s ease;
     }
-    .splash-inner{
-      text-align:center;
-      display:grid; gap:12px; place-items:center;
-    }
+    .splash-inner{ text-align:center; display:grid; gap:12px; place-items:center; }
     .logo{
       width:120px; height:120px; border-radius:24px; background:#111; display:grid; place-items:center;
-      box-shadow: 0 6px 24px rgba(0,0,0,.6);
-      font-size:54px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size:54px;
     }
     .title{ font-size:22px; font-weight:700; letter-spacing:.4px; }
     .note{ font-size:13px; opacity:.8; }
@@ -75,13 +71,12 @@
     function hideSplash(){ splash.classList.add('hidden'); }
     function setStatus(t){ statusEl.textContent = t; }
 
-    async function startPlayback(){
-      overlay.classList.add('hidden');
-      setStatus('Connessione…');
+    function initSource(){
       try{
         if (window.Hls && Hls.isSupported()) {
           const hls = new Hls({ lowLatencyMode:true, enableWorker:true, maxBufferLength:20, liveBackBufferLength:30 });
           hls.on(Hls.Events.ERROR, (evt, data) => {
+            console.warn('HLS error', data);
             if (data.fatal) {
               switch(data.type){
                 case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
@@ -92,29 +87,32 @@
           });
           hls.loadSource(streamURL);
           hls.attachMedia(video);
+          setStatus('Sorgente pronta (premi ▶︎)');
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = streamURL;
+          video.src = streamURL; // Safari
+          setStatus('Sorgente pronta (premi ▶︎)');
         } else {
           setStatus('Browser non supporta HLS');
-          overlay.classList.remove('hidden');
         }
-        setStatus('Pronto');
       } catch(e){
         console.error(e);
-        setStatus('Errore');
-        overlay.classList.remove('hidden');
+        setStatus('Errore nel caricamento sorgente');
       }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Nasconde splash dopo 2s e carica player
-      setTimeout(() => {
-        hideSplash();
-        startPlayback();
-      }, 2000);
+      // Solo splash: niente autoplay, niente play() automatico
+      setTimeout(() => { hideSplash(); }, 1500);
+      // Prepara la sorgente dietro le quinte così il play manuale parte pronto
+      initSource();
     });
 
-    playBtn.addEventListener('click', () => { hideSplash(); startPlayback(); });
+    playBtn.addEventListener('click', () => {
+      overlay.classList.add('hidden');
+      // Il video parte quando l'utente preme ▶︎ nel controllo
+      // Qui non richiamiamo video.play() per evitare qualsiasi autoplay
+      setStatus('Pronto alla riproduzione');
+    });
 
     // Service Worker per GitHub Pages
     if ('serviceWorker' in navigator) {

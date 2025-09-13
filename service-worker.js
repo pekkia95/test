@@ -1,5 +1,5 @@
 // Service Worker minimale per PWA su GitHub Pages
-const CACHE = 'extratv-shell-v4';
+const CACHE = 'extratv-shell-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -10,11 +10,16 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
+  self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(self.clients.claim());
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', (e) => {
