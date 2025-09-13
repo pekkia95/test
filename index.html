@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ExtraTV Live</title>
+  <!-- NIENTE manifest, NIENTE apple-mobile-web-app-capable: così l'icona Home apre sempre in Safari -->
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <meta name="format-detection" content="telephone=no">
+  <style>
+    :root { --bg:#000; --fg:#fff; }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
+    .wrap { display:grid; place-items:center; height:100vh; }
+    video { width:100vw; height:100vh; object-fit:contain; background:#000; }
+    .topbar { position:fixed; left:0; right:0; top:0; padding:10px; background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0)); display:flex; gap:8px; align-items:center; z-index:5; }
+    .status { margin-left:auto; font-size:12px; opacity:.85; }
+    .splash { position:fixed; inset:0; display:grid; place-items:center; background:#000; color:#fff; z-index:10; animation: splashFade 1.2s ease 1.2s forwards; }
+    .splash-inner{ text-align:center; display:grid; gap:12px; place-items:center; }
+    .logo{ width:120px; height:120px; border-radius:24px; background:#111; display:grid; place-items:center; box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size:54px; }
+    .title{ font-size:22px; font-weight:700; letter-spacing:.4px; }
+    @keyframes splashFade { to { opacity:0; visibility:hidden; } }
+    .controls { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:6; }
+    .btn { border:0; padding:12px 16px; font-size:16px; border-radius:999px; cursor:pointer; }
+    .btn-primary { background:#fff; color:#000; }
+  </style>
+</head>
+<body>
+  <!-- Splash screen -->
+  <div class="splash">
+    <div class="splash-inner">
+      <div class="logo">▶︎</div>
+      <div class="title">ExtraTV Live</div>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <span>📺 ExtraTV Live</span>
+    <div class="status" id="status">Pronto</div>
+  </div>
+
+  <div class="wrap">
+    <video id="video" autoplay muted playsinline webkit-playsinline preload="metadata" controls>
+      <source id="srcHLS" src="https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8" type="application/vnd.apple.mpegurl" />
+    </video>
+  </div>
+
+  <div class="controls">
+    <button id="unmuteBtn" class="btn btn-primary">🔊 Attiva audio</button>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const unmuteBtn = document.getElementById('unmuteBtn');
+    const statusEl = document.getElementById('status');
+    function setStatus(t){ statusEl.textContent = t; }
+    function bust(u){ return u + (u.includes('?')?'&':'?') + 'v=' + Date.now(); }
+    function seekLiveEdge(){ try { if (video.seekable && video.seekable.length) { const end = video.seekable.end(video.seekable.length-1); if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.5); } } catch(_){} }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const s = document.getElementById('srcHLS');
+      s.src = bust(s.src); // cache-busting
+      video.load();
+      try { seekLiveEdge(); await video.play(); setStatus('In riproduzione (muto)'); } catch(e) { setStatus('Premi ▶︎ per avviare'); }
+    });
+
+    unmuteBtn.addEventListener('click', async () => {
+      try { video.muted = false; await video.play(); setStatus('In riproduzione'); } catch(e) { console.warn('unmute failed', e); }
+    });
+  </script>
+</body>
+</html>
