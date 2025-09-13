@@ -18,8 +18,6 @@
     .overlay { position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.6); opacity:1; transition:opacity .2s; z-index:4; }
     .overlay.hidden { opacity:0; pointer-events:none; }
     .btn { border:0; padding:14px 22px; font-size:18px; border-radius:999px; cursor:pointer; }
-    a { color:#9cf; }
-    /* Splash SOLO cosmetico: auto-hide via CSS keyframes, nessun JS */
     .splash { position:fixed; inset:0; display:grid; place-items:center; background:#000; color:#fff; z-index:10; animation: splashFade 1.2s ease 1.2s forwards; }
     .splash-inner{ text-align:center; display:grid; gap:12px; place-items:center; }
     .logo{ width:120px; height:120px; border-radius:24px; background:#111; display:grid; place-items:center; box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size:54px; }
@@ -29,12 +27,11 @@
   </style>
 </head>
 <body>
-  <!-- Splash cosmetico: non tocca il player -->
   <div class="splash">
     <div class="splash-inner">
       <div class="logo">▶︎</div>
       <div class="title">ExtraTV Live</div>
-      <div class="note">Caricamento…</div>
+      <div class="note">Pronto</div>
     </div>
   </div>
 
@@ -43,7 +40,7 @@
     <div class="status" id="status">Pronto</div>
   </div>
   <div class="wrap">
-    <video id="video" controls playsinline webkit-playsinline preload="metadata" poster="./poster.png"></video>
+    <video id="video" controls playsinline webkit-playsinline preload="none" x-webkit-airplay="allow" airplay="allow"></video>
   </div>
 
   <div id="overlay" class="overlay">
@@ -58,59 +55,103 @@
     const playBtn = document.getElementById('playBtn');
     const statusEl = document.getElementById('status');
 
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
     function setStatus(t){ statusEl.textContent = t; }
 
-    async function startPlayback(){
-      overlay.classList.add('hidden');
-      setStatus('Connessione…');
-      try{
-        if (window.Hls && Hls.isSupported()) {
-          const hls = new Hls({ lowLatencyMode:true, enableWorker:true, maxBufferLength:20, liveBackBufferLength:30 });
-          hls.on(Hls.Events.ERROR, (evt, data) => {
-            if (data.fatal) {
-              switch(data.type){
-                case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-                case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                default: setStatus('Errore fatale'); hls.destroy();
-              }
-            }
-          });
-          hls.loadSource(streamURL);
-          hls.attachMedia(video);
-          video.addEventListener('loadedmetadata', () => video.play().catch(()=>{}));
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = streamURL; // Safari (nativo)
-          await video.play().catch(()=>{});
-        } else {
-          setStatus('Browser non supporta HLS');
-          overlay.classList.remove('hidden');
+    function seekLiveEdge() {
+      try {
+        if (video.seekable && video.seekable.length) {
+          const end = video.seekable.end(video.seekable.length - 1);
+          if (!Number.isNaN(end) && isFinite(end)) {
+            video.currentTime = Math.max(0, end - 0.5);
+          }
         }
-        setStatus('In riproduzione');
-      } catch(e){
-        console.error(e);
-        setStatus('Tocca "Riproduci" per avviare');
-        overlay.classList.remove('hidden');
+      } catch(e){}
+    }
+
+    function nudgePlayCycle() {
+      // Piccolo ciclo per sbloccare eventuale frame freeze
+      seekLiveEdge();
+      video.pause();
+      setTimeout(async () => {
+        seekLiveEdge();
+        try { await video.play(); } catch(e) {}
+      }, 150);
+    }
+
+    async function startIOSNative() {
+      setStatus('Carico sorgente…');
+      // Forza una URL unica per evitare poster/freeze caching
+      video.src = streamURL + (streamURL.includes('?')?'&':'?') + 't=' + Date.now();
+      video.load();
+      // Attendi metadata, poi cerca live edge e play
+      const onLoadedMeta = async () => {
+        video.removeEventListener('loadedmetadata', onLoadedMeta);
+        seekLiveEdge();
+        try { await video.play(); } catch(e) {}
+        // Se resta fermo, prova a nudge
+        setTimeout(() => {
+          if (video.readyState < 3 || video.currentTime === 0) {
+            nudgePlayCycle();
+          }
+        }, 2500);
+      };
+      video.addEventListener('loadedmetadata', onLoadedMeta);
+    }
+
+    async function startNonIOS() {
+      setStatus('Connessione…');
+      if (window.Hls && Hls.isSupported()) {
+        const hls = new Hls({ lowLatencyMode:true, enableWorker:true, maxBufferLength:20, liveBackBufferLength:30 });
+        hls.on(Hls.Events.ERROR, (evt, data) => {
+          if (data.fatal) {
+            switch(data.type){
+              case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+              case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+              default: hls.destroy(); setStatus('Errore fatale');
+            }
+          }
+        });
+        hls.loadSource(streamURL);
+        hls.attachMedia(video);
+        video.addEventListener('loadedmetadata', () => video.play().catch(()=>{}));
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = streamURL;
+        await video.play().catch(()=>{});
+      } else {
+        setStatus('Browser non supporta HLS');
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      // v2 behavior: autoplay solo su non-iOS
-      if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        startPlayback();
+    playBtn.addEventListener('click', async () => {
+      overlay.classList.add('hidden');
+      if (isIOS) {
+        await startIOSNative();
       } else {
-        // Su iOS richiede gesto
-        setStatus('Pronto (iOS: premi ▶︎)');
+        await startNonIOS();
       }
     });
 
-    playBtn.addEventListener('click', startPlayback);
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!isIOS) {
+        // comportamento v2: autoplay su non iOS
+        (async () => { try { await startNonIOS(); } catch{} })();
+        overlay.classList.add('hidden');
+      } else {
+        setStatus('iOS: premi ▶︎');
+      }
+    });
 
-    // Service Worker come v2 (compatibile con GitHub Pages)
+    // Service Worker: non registrarlo in iOS standalone
     if ('serviceWorker' in navigator) {
-      const parts = location.pathname.split('/').filter(Boolean);
-      const base = parts.length ? '/' + parts[0] + '/' : '/';
-      const swUrl = base + 'service-worker.js';
-      navigator.serviceWorker.register(swUrl).catch(console.warn);
+      if (!(isIOS && isStandalone)) {
+        const parts = location.pathname.split('/').filter(Boolean);
+        const base = parts.length ? '/' + parts[0] + '/' : '/';
+        const swUrl = base + 'service-worker.js';
+        navigator.serviceWorker.register(swUrl).catch(console.warn);
+      }
     }
   </script>
 </body>

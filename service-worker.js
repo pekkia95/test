@@ -1,12 +1,11 @@
-// Service Worker minimal compatibile con GitHub Pages (come v2)
-const CACHE = 'extratv-shell-v21';
+// Service Worker minimal (disabilitato in iOS standalone via JS)
+const CACHE = 'extratv-shell-v22';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon-192.png',
-  './icon-512.png',
-  './poster.png'
+  './icon-512.png'
 ];
 
 self.addEventListener('install', (e) => {
