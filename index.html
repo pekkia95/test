@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stream TV</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         body {
@@ -103,9 +104,25 @@
                     actionButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
                 }
             }
-            
-            // Imposta la sorgente video e gestisce la riproduzione nativa
-            video.src = videoUrl;
+
+            // Gestione del flusso HLS con hls.js
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(videoUrl);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    updateButton();
+                });
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('HLS.js error:', data);
+                    showMessage(`Errore di streaming: ${data.details}`);
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Fallback per il supporto nativo in Safari
+                video.src = videoUrl;
+            } else {
+                showMessage('Il tuo browser non supporta lo streaming HLS.');
+            }
 
             // Event listener per il pulsante
             actionButton.addEventListener('click', () => {
@@ -115,7 +132,7 @@
                         updateButton();
                     }).catch(error => {
                         console.error("Play failed:", error);
-                        showMessage("Riproduzione fallita. Potrebbe esserci un blocco di sicurezza.");
+                        showMessage("Riproduzione fallita. Il browser ha bloccato l'azione.");
                     });
                 } else {
                     video.muted = !video.muted;
