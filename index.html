@@ -11,26 +11,55 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #ffffff;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             color: #1f2937;
+            overflow-x: hidden;
+        }
+
+        /* Stile per la splash screen */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f97316;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .splash-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .container {
-            max-width: 800px;
             width: 100%;
-            margin: 1rem;
-            padding: 1.5rem;
+            padding: 1rem;
             background-color: #ffffff;
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 1.5rem;
             text-align: center;
+            opacity: 0; /* Nasconde il contenuto finché lo splash screen è attivo */
+            transition: opacity 1s ease-in-out;
+            box-sizing: border-box; /* Assicura che il padding non causi overflow */
+        }
+
+        .container.visible {
+            opacity: 1;
         }
 
         .video-container {
@@ -40,6 +69,7 @@
             border-radius: 1rem;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            background-color: #000000;
         }
 
         .video-player {
@@ -48,25 +78,72 @@
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            background-color: #000000;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .app-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            min-width: 150px; /* Assicura che i pulsanti siano abbastanza larghi per il touch */
+        }
+
+        .app-button.primary {
+            background-color: #f97316;
+            color: #fff;
+        }
+
+        .app-button.primary:hover {
+            background-color: #ea580c;
+        }
+
+        .app-button.secondary {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .app-button.secondary:hover {
+            background-color: #d1d5db;
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
+    <div id="splash" class="splash-screen">
+        ExtraTv Live
+    </div>
+
+    <div id="app-container" class="container">
         <h1 class="text-3xl font-bold">Extra TV Live</h1>
         <p class="text-gray-600">Streaming dal vivo in corso.</p>
 
         <div class="video-container">
-            <video id="video" class="video-player" muted controls playsinline>
+            <video id="video" class="video-player" muted playsinline>
                 Il tuo browser non supporta il tag video.
             </video>
         </div>
 
-        <button id="action-button" class="mt-4 p-3 rounded-lg text-white font-bold transition-colors">
-            Avvia
-        </button>
+        <div class="button-group">
+            <button id="main-button" class="app-button primary">
+                Attiva Audio
+            </button>
+            <button id="pip-button" class="app-button secondary">
+                Entra in PiP
+            </button>
+        </div>
 
         <p id="message-display" class="mt-2 text-sm text-gray-500"></p>
     </div>
@@ -74,11 +151,23 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const video = document.getElementById('video');
-            const actionButton = document.getElementById('action-button');
+            const mainButton = document.getElementById('main-button');
+            const pipButton = document.getElementById('pip-button');
             const messageDisplay = document.getElementById('message-display');
+            const splashScreen = document.getElementById('splash');
+            const appContainer = document.getElementById('app-container');
 
             // URL del flusso video
             const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+            let hls;
+
+            // Funzione per mostrare il contenuto dell'app dopo lo splash screen
+            function showApp() {
+                splashScreen.classList.add('hidden');
+                appContainer.classList.add('visible');
+            }
+
+            setTimeout(showApp, 2000);
 
             // Funzione per mostrare un messaggio temporaneo
             function showMessage(msg, duration = 3000) {
@@ -88,73 +177,103 @@
                 }, duration);
             }
 
-            // Funzione per aggiornare il testo e lo stile del pulsante
-            function updateButton() {
-                if (video.paused) {
-                    actionButton.textContent = 'Avvia Riproduzione';
-                    actionButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
-                    actionButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
-                } else if (video.muted) {
-                    actionButton.textContent = 'Attiva Audio';
-                    actionButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
-                    actionButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            // Funzione per aggiornare il testo del pulsante principale
+            function updateMainButton() {
+                if (video.muted) {
+                    mainButton.textContent = 'Attiva Audio';
                 } else {
-                    actionButton.textContent = 'Disattiva Audio';
-                    actionButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-                    actionButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                    mainButton.textContent = 'Disattiva Audio';
                 }
             }
-
-            // Gestione del flusso HLS con hls.js
-            if (Hls.isSupported()) {
-                const hls = new Hls();
+            
+            // Funzione per caricare il video con hls.js
+            function loadVideo() {
+                if (hls) {
+                    hls.destroy();
+                }
+                hls = new Hls();
                 hls.loadSource(videoUrl);
                 hls.attachMedia(video);
+
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    updateButton();
+                    video.play().then(() => {
+                        updateMainButton();
+                    }).catch(error => {
+                        console.error("Play failed:", error);
+                        showMessage("Riproduzione automatica fallita. Premi il pulsante per avviare.");
+                        mainButton.textContent = 'Avvia Riproduzione';
+                        mainButton.removeEventListener('click', toggleMute);
+                        mainButton.addEventListener('click', manualPlay, { once: true });
+                    });
                 });
+
                 hls.on(Hls.Events.ERROR, (event, data) => {
                     console.error('HLS.js error:', data);
-                    showMessage(`Errore di streaming: ${data.details}`);
+                    if (data.fatal) {
+                        showMessage(`Errore di streaming: ${data.details}. Riavvio in corso...`);
+                        setTimeout(() => loadVideo(), 1000);
+                    }
                 });
+            }
+            
+            // Funzione per avviare la riproduzione manualmente
+            function manualPlay() {
+                video.play().then(() => {
+                    video.muted = false;
+                    updateMainButton();
+                    mainButton.removeEventListener('click', manualPlay);
+                    mainButton.addEventListener('click', toggleMute);
+                }).catch(error => {
+                    console.error("Manual play failed:", error);
+                    showMessage("Riproduzione fallita. Il browser ha bloccato l'azione.");
+                });
+            }
+
+            // Funzione per attivare/disattivare l'audio
+            function toggleMute() {
+                video.muted = !video.muted;
+                updateMainButton();
+            }
+
+            if (Hls.isSupported()) {
+                loadVideo();
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 // Fallback per il supporto nativo in Safari
                 video.src = videoUrl;
+                video.play().catch(error => {
+                    console.error("Autoplay failed on native player:", error);
+                    showMessage("Riproduzione automatica fallita. Premi il pulsante per avviare.");
+                    mainButton.textContent = 'Avvia Riproduzione';
+                    mainButton.removeEventListener('click', toggleMute);
+                    mainButton.addEventListener('click', manualPlay, { once: true });
+                });
             } else {
                 showMessage('Il tuo browser non supporta lo streaming HLS.');
             }
 
-            // Event listener per il pulsante
-            actionButton.addEventListener('click', () => {
-                if (video.paused) {
-                    video.play().then(() => {
-                        video.muted = false;
-                        updateButton();
-                    }).catch(error => {
-                        console.error("Play failed:", error);
-                        showMessage("Riproduzione fallita. Il browser ha bloccato l'azione.");
+            // Event listener per il pulsante principale
+            mainButton.addEventListener('click', toggleMute);
+
+            // Event listener per il pulsante PiP
+            pipButton.addEventListener('click', () => {
+                if (document.pictureInPictureElement) {
+                    document.exitPictureInPicture().catch(error => {
+                        console.error("Exit PiP failed:", error);
                     });
                 } else {
-                    video.muted = !video.muted;
-                    updateButton();
+                    video.requestPictureInPicture().catch(error => {
+                        console.error("PiP failed:", error);
+                    });
                 }
             });
-
-            // Sincronizza lo stato del pulsante se l'utente usa i controlli nativi del player
-            video.addEventListener('volumechange', () => {
-                updateButton();
-            });
             
-            video.addEventListener('play', () => {
-                updateButton();
-            });
-
-            video.addEventListener('pause', () => {
-                updateButton();
-            });
+            // Sincronizza lo stato del pulsante se l'utente usa i controlli nativi del player
+            video.addEventListener('volumechange', updateMainButton);
+            video.addEventListener('play', updateMainButton);
+            video.addEventListener('pause', updateMainButton);
 
             // Stato iniziale
-            updateButton();
+            updateMainButton();
         });
     </script>
 </body>
