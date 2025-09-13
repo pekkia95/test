@@ -2,130 +2,128 @@
 <html lang="it">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ExtraTV Live</title>
   <meta name="theme-color" content="#000000">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-
-  <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
   <style>
     html, body { margin:0; height:100%; background:#000; color:#fff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
     .wrap { display:grid; place-items:center; height:100vh; }
-    .bar { position:fixed; left:0; right:0; top:0; padding:10px; background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0)); display:flex; gap:8px; align-items:center; z-index:10; }
+    video { width:100vw; height:100vh; object-fit:contain; background:#000; }
+    .topbar { position:fixed; left:0; right:0; top:0; padding:10px; background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0)); display:flex; gap:8px; align-items:center; z-index:10; }
     .status { margin-left:auto; font-size:12px; opacity:.85; }
-    .player { width:100vw; height:100vh; }
-    .controls { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:12; }
-    .btn { border:0; padding:10px 14px; font-size:16px; border-radius:999px; cursor:pointer; }
-    .btn-primary { background:#fff; color:#000; }
-    .btn-ghost { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.25); }
+    .overlay { position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.6); opacity:1; transition:opacity .2s; z-index:20; }
+    .overlay.hidden { opacity:0; pointer-events:none; }
+    .btn { border:0; padding:14px 22px; font-size:18px; border-radius:999px; cursor:pointer; }
+    a { color:#9cf; }
+    /* Splash screen */
+    .splash {
+      position:fixed; inset:0;
+      display:grid; place-items:center;
+      background:#000; color:#fff;
+      z-index:30;
+      transition: opacity .6s ease;
+    }
+    .splash-inner{
+      text-align:center;
+      display:grid; gap:12px; place-items:center;
+    }
+    .logo{
+      width:120px; height:120px; border-radius:24px; background:#111; display:grid; place-items:center;
+      box-shadow: 0 6px 24px rgba(0,0,0,.6);
+      font-size:54px;
+    }
+    .title{ font-size:22px; font-weight:700; letter-spacing:.4px; }
+    .note{ font-size:13px; opacity:.8; }
+    .splash.hidden { opacity:0; pointer-events:none; }
   </style>
 </head>
 <body>
-  <div class="bar">
-    <strong>📺 ExtraTV Live</strong>
+  <!-- Splash screen -->
+  <div id="splash" class="splash">
+    <div class="splash-inner">
+      <div class="logo">▶︎</div>
+      <div class="title">ExtraTV Live</div>
+      <div class="note">Avvio in corso…</div>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <span>📺 ExtraTV Live</span>
     <div class="status" id="status">Pronto</div>
   </div>
-
   <div class="wrap">
-    <video
-      id="extratv"
-      class="video-js vjs-big-play-centered player"
-      controls
-      preload="auto"
-      autoplay
-      muted
-      playsinline
-      webkit-playsinline
-      data-setup='{}'>
-      <source id="srcHLS" src="https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8" type="application/x-mpegURL" />
-    </video>
+    <video id="video" controls playsinline webkit-playsinline preload="metadata" poster="./poster.png"></video>
   </div>
 
-  <div class="controls">
-    <button id="unmuteBtn" class="btn btn-primary">🔊 Attiva audio</button>
-    <button id="retryBtn" class="btn btn-ghost">⟲ Riprova</button>
+  <div id="overlay" class="overlay">
+    <button id="playBtn" class="btn">▶︎ Riproduci</button>
   </div>
 
-  <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
+    const streamURL = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const playBtn = document.getElementById('playBtn');
     const statusEl = document.getElementById('status');
-    const player = videojs('extratv');
-    const srcEl = document.getElementById('srcHLS');
-    const retryBtn = document.getElementById('retryBtn');
-    const unmuteBtn = document.getElementById('unmuteBtn');
+    const splash = document.getElementById('splash');
 
-    const M3U8 = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
-    let lastTime = 0, watchdog = null;
-
+    function hideSplash(){ splash.classList.add('hidden'); }
     function setStatus(t){ statusEl.textContent = t; }
-    function cacheBust(url){ return url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now(); }
-    function seekLiveEdge(v) {
-      try {
-        const video = v || player.tech(true).el();
-        if (video.seekable && video.seekable.length) {
-          const end = video.seekable.end(video.seekable.length - 1);
-          if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.5);
-        }
-      } catch(_){}
-    }
-    function armWatchdog() {
-      clearTimeout(watchdog);
-      const video = player.tech(true).el();
-      lastTime = video.currentTime || 0;
-      watchdog = setTimeout(() => {
-        const cur = video.currentTime || 0;
-        if (video.readyState < 3 || cur <= lastTime + 0.05) {
-          // Nudge: pausa -> seek live -> play
-          try { video.pause(); } catch(_ ){}
-          seekLiveEdge(video);
-          setTimeout(() => player.play().catch(()=>{}), 160);
-        }
-      }, 2500);
-    }
 
-    function loadFresh() {
-      // Ricarica la sorgente con cache-busting
-      const fresh = cacheBust(M3U8);
-      player.pause();
-      player.src({ src: fresh, type: 'application/x-mpegURL' });
-      player.load();
-      setStatus('Riconnessione…');
-      player.one('loadedmetadata', () => {
-        seekLiveEdge();
-        player.play().catch(()=>{});
-        armWatchdog();
-      });
-    }
-
-    // Eventi
-    player.on('loadedmetadata', () => { seekLiveEdge(); armWatchdog(); setStatus('In riproduzione (muto)'); });
-    player.on('timeupdate', () => armWatchdog());
-    player.on('waiting', () => armWatchdog());
-    player.on('stalled', () => armWatchdog());
-    player.on('error', () => { setStatus('Errore stream'); });
-
-    // Unmute
-    unmuteBtn.addEventListener('click', async () => {
-      try { player.muted(false); await player.play(); setStatus('In riproduzione'); } catch(_ ){}
-    });
-
-    // Retry manuale
-    retryBtn.addEventListener('click', loadFresh);
-
-    // Ricarica quando torni in primo piano (iOS a volte sospende)
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadFresh(); });
-
-    // Avvio
-    player.ready(() => {
+    async function startPlayback(){
+      overlay.classList.add('hidden');
       setStatus('Connessione…');
-      player.play().catch(()=>{ setStatus('Premi ▶︎ per avviare'); });
-    });
+      try{
+        if (window.Hls && Hls.isSupported()) {
+          const hls = new Hls({ lowLatencyMode:true, enableWorker:true, maxBufferLength:20, liveBackBufferLength:30 });
+          hls.on(Hls.Events.ERROR, (evt, data) => {
+            if (data.fatal) {
+              switch(data.type){
+                case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                default: setStatus('Errore fatale'); hls.destroy();
+              }
+            }
+          });
+          hls.loadSource(streamURL);
+          hls.attachMedia(video);
+          video.addEventListener('loadedmetadata', () => video.play().catch(()=>{}));
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = streamURL;
+          await video.play();
+        } else {
+          setStatus('Browser non supporta HLS');
+          overlay.classList.remove('hidden');
+        }
+        setStatus('In riproduzione');
+      } catch(e){
+        console.error(e);
+        setStatus('Tocca "Riproduci" per avviare');
+        overlay.classList.remove('hidden');
+      }
+    }
 
-    // Disattiva completamente Service Worker (nessuna registrazione)
-    // (se ne avevi uno vecchio: Apri in Safari -> Condividi -> Aggiungi a Home di nuovo per ripulire)
+    // Avvio dopo 3 secondi (manteniamo il pulsante come fallback)
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        hideSplash();
+        startPlayback();
+      }, 3000);
+    });
+    playBtn.addEventListener('click', () => { hideSplash(); startPlayback(); });
+
+    // Service Worker con path dinamico per GitHub Pages
+    if ('serviceWorker' in navigator) {
+      const parts = location.pathname.split('/').filter(Boolean);
+      const base = parts.length ? '/' + parts[0] + '/' : '/';
+      const swUrl = base + 'service-worker.js';
+      navigator.serviceWorker.register(swUrl).catch(console.warn);
+    }
   </script>
 </body>
 </html>
