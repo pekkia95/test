@@ -53,13 +53,13 @@
 
   <div class="controls">
     <button id="unmuteBtn" class="btn btn-primary">🔊 Attiva audio</button>
-    <button id="refreshBtn" class="btn btn-ghost">⟲ Ricarica cache</button>
+    <button id="pipBtn" class="btn btn-ghost">⿻ PiP</button>
   </div>
 
   <script>
     const video = document.getElementById('video');
     const unmuteBtn = document.getElementById('unmuteBtn');
-    const refreshBtn = document.getElementById('refreshBtn');
+    const pipBtn = document.getElementById('pipBtn');
     const statusEl = document.getElementById('status');
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
@@ -68,6 +68,7 @@
     function bust(u){ return u + (u.includes('?')?'&':'?') + 'v=' + Date.now(); }
     function seekLiveEdge(){ try { if (video.seekable && video.seekable.length) { const end = video.seekable.end(video.seekable.length-1); if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.5); } } catch(_){} }
 
+    // Avvio con cache-busting
     document.addEventListener('DOMContentLoaded', async () => {
       setStatus(isIOS ? (isStandalone ? 'iOS Web App' : 'iOS Safari') : 'Pronto');
       const s = document.getElementById('srcHLS');
@@ -76,27 +77,40 @@
       try { seekLiveEdge(); await video.play(); setStatus('In riproduzione (muto)'); } catch(e) { setStatus('Premi ▶︎ per avviare'); }
     });
 
+    // Attiva audio
     unmuteBtn.addEventListener('click', async () => {
       try { video.muted = false; await video.play(); setStatus('In riproduzione'); } catch(e) { console.warn('unmute failed', e); }
     });
 
-    async function clearCachesAndReload() {
+    // Picture-in-Picture (PiP)
+    async function enterPiP() {
       try {
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map(k => caches.delete(k)));
+        if ('pictureInPictureEnabled' in document && typeof video.requestPictureInPicture === 'function') {
+          if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+          } else {
+            await video.requestPictureInPicture();
+          }
+        } else if (typeof video.webkitSetPresentationMode === 'function' && video.webkitSupportsPresentationMode && video.webkitSupportsPresentationMode('picture-in-picture')) {
+          const mode = video.webkitPresentationMode;
+          video.webkitSetPresentationMode(mode === 'picture-in-picture' ? 'inline' : 'picture-in-picture');
+        } else {
+          alert('PiP non supportato su questo dispositivo/browser.');
         }
-        if ('serviceWorker' in navigator) {
-          const regs = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(regs.map(r => r.unregister()));
-        }
-      } catch(e) { console.warn('cache clear error', e); }
-      const url = new URL(location.href);
-      url.searchParams.set('r', Date.now().toString());
-      location.replace(url.toString());
+      } catch(e) { console.warn('PiP error', e); }
     }
-    refreshBtn.addEventListener('click', clearCachesAndReload);
+    pipBtn.addEventListener('click', enterPiP);
 
+    // (Opzionale) watchdog anti-stallo
+    setTimeout(() => {
+      if (video.readyState < 3 || video.currentTime === 0) {
+        try { video.pause(); } catch(_ ){}
+        seekLiveEdge();
+        setTimeout(() => video.play().catch(()=>{}), 160);
+      }
+    }, 2500);
+
+    // SW: non registrarlo in iOS Web App
     if ('serviceWorker' in navigator) {
       if (!(isIOS && isStandalone)) {
         navigator.serviceWorker.register('./service-worker.js').catch(console.warn);
