@@ -1,20 +1,20 @@
 {
-  "id": "/test/",
+  "id": "/",
   "name": "ExtraTV Live",
   "short_name": "ExtraTV",
-  "start_url": "/test/",
-  "scope": "/test/",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "/test/icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/test/icon-512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

@@ -1,14 +1,12 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ExtraTV Live</title>
   <meta name="theme-color" content="#000000">
-  <link rel="manifest" href="/test/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/test/icon-192.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-192.png">
   <style>
     :root { --bg:#000; --fg:#fff; }
     html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
@@ -25,6 +23,9 @@
     .logo { width:120px; height:120px; border-radius:24px; background:#111; display:grid; place-items:center; box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size:54px; }
     .title { font-size:22px; font-weight:700; letter-spacing:.4px; }
     @keyframes splashFade { to { opacity:0; visibility:hidden; } }
+    /* Overlay install iOS */
+    .install-overlay { position:fixed; inset:0; background:rgba(0,0,0,.8); color:#fff; display:none; place-items:center; z-index:30; padding:24px; text-align:center; }
+    .install-card { max-width:520px; border:1px solid rgba(255,255,255,.2); border-radius:16px; padding:18px; background:rgba(0,0,0,.6); }
   </style>
 </head>
 <body>
@@ -41,46 +42,83 @@
   </div>
 
   <div class="wrap">
-    <video id="video" autoplay muted playsinline webkit-playsinline preload="metadata" controls>
-      <source id="srcHLS" src="https://proud-wave-a54c.pekkia95.workers.dev/live/extratvlive/index.m3u8" type="application/vnd.apple.mpegurl">
-    </video>
+    <!-- Player alternativo: NIENTE <source>, attacco hls.js SEMPRE -->
+    <video id="video" autoplay muted playsinline webkit-playsinline preload="metadata" controls></video>
   </div>
 
   <div class="controls">
     <button id="muteToggle" class="btn btn-primary">🔊 Attiva audio</button>
+    <button id="pipBtn" class="btn btn-ghost">⿻ PiP</button>
     <button id="retryBtn" class="btn btn-ghost">⟲ Riprova</button>
+    <button id="installBtn" class="btn btn-ghost">➕ Aggiungi alla Home</button>
   </div>
 
+  <!-- Overlay istruzioni iOS -->
+  <div id="installOverlay" class="install-overlay">
+    <div class="install-card">
+      <h3 style="margin-top:0">Aggiungi alla Home su iPhone/iPad</h3>
+      <p>1) Tocca il tasto <strong>Condividi</strong> (quadrato con freccia) in Safari</p>
+      <p>2) Scegli <strong>Aggiungi a Home</strong></p>
+      <button id="closeOverlay" class="btn btn-primary">OK</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     const SRC = "https://proud-wave-a54c.pekkia95.workers.dev/live/extratvlive/index.m3u8";
     const video = document.getElementById('video');
-    const source = document.getElementById('srcHLS');
     const muteToggle = document.getElementById('muteToggle');
+    const pipBtn = document.getElementById('pipBtn');
     const retryBtn = document.getElementById('retryBtn');
     const statusEl = document.getElementById('status');
     const splash = document.getElementById('splash');
+    const installBtn = document.getElementById('installBtn');
+    const installOverlay = document.getElementById('installOverlay');
+    const closeOverlay = document.getElementById('closeOverlay');
 
+    // Player con hls.js forzato
+    let hls = null;
     function setStatus(t) { statusEl.textContent = t; }
     function bust(u) { return u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now(); }
     function seekLive() {
       try {
         if (video.seekable && video.seekable.length) {
           const end = video.seekable.end(video.seekable.length - 1);
-          if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.5);
+          if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.7);
         }
-      } catch(_ ){}
+      } catch(_ ) {}
     }
-    function updateMuteBtn() { muteToggle.textContent = video.muted ? '🔊 Attiva audio' : '🔇 Disattiva audio'; }
-
-    async function playFresh() {
-      source.src = bust(SRC); // cache-busting playlist
-      video.load();
-      try { seekLive(); await video.play(); setStatus('In riproduzione' + (video.muted ? ' (muto)' : '')); }
-      catch(e) { setStatus('Premi ▶︎ per avviare'); }
-      updateMuteBtn();
+    async function attachHls() {
+      if (!window.Hls || !Hls.isSupported()) {
+        setStatus('Questo browser non supporta MSE/hls.js');
+        return;
+      }
+      try {
+        if (hls) try { hls.destroy(); } catch(_ ) {}
+        hls = new Hls({ enableWorker:true, lowLatencyMode:true, maxBufferLength:20, liveBackBufferLength:30 });
+        hls.on(Hls.Events.ERROR, (evt, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+              case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+              default: try { hls.destroy(); } catch(_ ) {}; setStatus('Errore HLS');
+            }
+          }
+        });
+        hls.loadSource(bust(SRC));
+        hls.attachMedia(video);
+        video.crossOrigin = 'anonymous';
+        video.addEventListener('loadedmetadata', () => {
+          seekLive();
+          video.play().catch(()=>{ setStatus('Tocca ▶︎ per avviare'); });
+        }, { once:true });
+        setStatus('Connessione…');
+      } catch(e) {
+        console.warn(e); setStatus('Errore inizializzazione');
+      }
     }
 
-    // Watchdog anti-stallo
+    // Anti-stallo
     let wd = null;
     function armWatchdog() {
       clearTimeout(wd);
@@ -88,33 +126,66 @@
       wd = setTimeout(() => {
         const now = video.currentTime || 0;
         if (video.readyState < 3 || now <= cur + 0.05) {
-          try { video.pause(); } catch(_ ){}
+          try { video.pause(); } catch(_ ) {}
           seekLive();
           setTimeout(() => video.play().catch(()=>{}), 160);
         }
       }, 2500);
     }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      await playFresh();
-      setTimeout(() => splash.style.display = 'none', 1400);
-      armWatchdog();
-    });
     video.addEventListener('timeupdate', armWatchdog);
     video.addEventListener('waiting', armWatchdog);
     video.addEventListener('stalled', armWatchdog);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') playFresh(); });
 
+    // UI
     muteToggle.addEventListener('click', async () => {
       try {
         video.muted = !video.muted;
-        if (!video.muted && video.paused) { await video.play().catch(()=>{}); }
+        if (!video.muted && video.paused) await video.play().catch(()=>{});
         setStatus(video.muted ? 'In riproduzione (muto)' : 'In riproduzione');
-        updateMuteBtn();
+        muteToggle.textContent = video.muted ? '🔊 Attiva audio' : '🔇 Disattiva audio';
       } catch(e) { console.warn('toggle mute failed', e); }
     });
 
-    retryBtn.addEventListener('click', playFresh);
+    pipBtn.addEventListener('click', async () => {
+      try {
+        if ('pictureInPictureEnabled' in document && typeof video.requestPictureInPicture === 'function') {
+          if (document.pictureInPictureElement) await document.exitPictureInPicture();
+          else await video.requestPictureInPicture();
+        } else if (typeof video.webkitSetPresentationMode === 'function' &&
+                   video.webkitSupportsPresentationMode &&
+                   video.webkitSupportsPresentationMode('picture-in-picture')) {
+          const mode = video.webkitPresentationMode;
+          video.webkitSetPresentationMode(mode === 'picture-in-picture' ? 'inline' : 'picture-in-picture');
+        } else {
+          alert('PiP non supportato su questo dispositivo/browser.');
+        }
+      } catch(e) { console.warn('PiP error', e); }
+    });
+
+    retryBtn.addEventListener('click', attachHls);
+
+    // Installazione: Android (beforeinstallprompt) + iOS (overlay istruzioni)
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => { deferredPrompt = e; e.preventDefault(); });
+    installBtn.addEventListener('click', async () => {
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        installOverlay.style.display = 'grid';
+      } else if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const result = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+      } else {
+        alert('Se non vedi il prompt, usa il menu del browser per aggiungere alla Home.');
+      }
+    });
+    closeOverlay.addEventListener('click', () => installOverlay.style.display = 'none');
+
+    // Avvio
+    document.addEventListener('DOMContentLoaded', async () => {
+      await attachHls();
+      setTimeout(() => splash.style.display = 'none', 1400);
+    });
   </script>
 </body>
 </html>
