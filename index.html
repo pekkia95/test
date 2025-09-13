@@ -187,7 +187,7 @@
             </video>
         </div>
 
-        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">Tocca il video e ruota il telefono per la modalità Schermo Intero!</p>
+        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">Tocca due volte il video per la modalità Schermo Intero!</p>
 
         <div class="button-group">
             <button id="main-button" class="app-button primary">
@@ -350,6 +350,27 @@
                 }
             });
 
+            // Aggiungi un event listener per il doppio tocco
+            let lastClickTime = 0;
+            video.addEventListener('click', (e) => {
+                const clickTime = new Date().getTime();
+                if (clickTime - lastClickTime < 300) {
+                    // È un doppio tocco
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else if (video.webkitEnterFullscreen) { // Fallback for iOS Safari
+                         // If the video is already in fullscreen on iOS, exit it
+                         if (document.webkitFullscreenElement) {
+                            document.webkitExitFullscreen();
+                        } else {
+                            video.webkitEnterFullscreen();
+                        }
+                    } else if (video.requestFullscreen) {
+                        video.requestFullscreen();
+                    }
+                }
+                lastClickTime = clickTime;
+            });
 
             // Sincronizza lo stato del pulsante se l'utente usa i controlli nativi del player
             video.addEventListener('volumechange', updateMainButton);
