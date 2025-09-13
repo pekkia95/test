@@ -25,6 +25,7 @@
     .controls { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:6; }
     .btn { border:0; padding:12px 16px; font-size:16px; border-radius:999px; cursor:pointer; }
     .btn-primary { background:#fff; color:#000; }
+    .btn-ghost { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.25); }
     .hidden { display:none !important; }
     @supports (padding: env(safe-area-inset-bottom)) {
       .controls { padding-bottom: calc(env(safe-area-inset-bottom) + 8px); }
@@ -47,36 +48,51 @@
 
   <div class="wrap">
     <video id="video" autoplay muted playsinline webkit-playsinline preload="none" controls x-webkit-airplay="allow" airplay="allow">
-      <source src="https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8" type="application/vnd.apple.mpegurl">
+      <source src="https://proud-wave-a54c.pekkia95.workers.dev/live/extratvlive/index.m3u8" type="application/vnd.apple.mpegurl">
     </video>
   </div>
 
   <div class="controls" id="controls">
     <button id="unmuteBtn" class="btn btn-primary">🔊 Attiva audio</button>
+    <button id="retryBtn" class="btn btn-ghost hidden">⟲ Riprova</button>
   </div>
 
   <script>
     const video = document.getElementById('video');
     const unmuteBtn = document.getElementById('unmuteBtn');
+    const retryBtn = document.getElementById('retryBtn');
     const statusEl = document.getElementById('status');
-    const ua = navigator.userAgent;
-    const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
     function setStatus(t){ statusEl.textContent = t; }
 
-    // Primo tap: togli mute (obbligatorio per iOS dopo autoplay muted)
+    // Unmute al tap
     unmuteBtn.addEventListener('click', async () => {
       try {
         video.muted = false;
         await video.play().catch(()=>{});
         unmuteBtn.classList.add('hidden');
         setStatus('In riproduzione');
-      } catch(e){
-        console.warn('unmute failed', e);
-      }
+      } catch(e){ console.warn('unmute failed', e); }
     });
 
-    // In alcuni casi su iOS PWA conviene NON usare SW; lo evitiamo qui
+    // Watchdog anti-freeze (iOS PWA edge cases)
+    setTimeout(() => {
+      if (video.readyState < 3 || video.currentTime === 0) {
+        try { video.pause(); } catch{}
+        try {
+          if (video.seekable && video.seekable.length) {
+            const end = video.seekable.end(video.seekable.length - 1);
+            if (!Number.isNaN(end) && isFinite(end)) video.currentTime = Math.max(0, end - 0.5);
+          }
+        } catch{}
+        setTimeout(() => video.play().catch(() => retryBtn.classList.remove('hidden')), 150);
+      }
+    }, 2500);
+
+    retryBtn.addEventListener('click', () => { location.reload(); });
+
+    // Non registrare SW in iOS standalone
     if ('serviceWorker' in navigator) {
       if (!(isIOS && isStandalone)) {
         const parts = location.pathname.split('/').filter(Boolean);
@@ -85,13 +101,6 @@
         navigator.serviceWorker.register(swUrl).catch(console.warn);
       }
     }
-
-    // Aggiorna stato base
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        setStatus('Pronto');
-      }
-    });
   </script>
 </body>
 </html>
