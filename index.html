@@ -13,40 +13,15 @@
     html, body { margin:0; height:100%; background:#000; color:#fff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
     .wrap { display:grid; place-items:center; height:100vh; }
     video { width:100vw; height:100vh; object-fit:contain; background:#000; }
-    .topbar { position:fixed; left:0; right:0; top:0; padding:10px; background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0)); display:flex; gap:8px; align-items:center; z-index:10; }
+    .topbar { position:fixed; left:0; right:0; top:0; padding:10px; background:linear-gradient(180deg,rgba(0,0,0,.7),rgba(0,0,0,0)); display:flex; gap:8px; align-items:center; }
     .status { margin-left:auto; font-size:12px; opacity:.85; }
-    .overlay { position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.6); opacity:1; transition:opacity .2s; z-index:20; }
+    .overlay { position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.6); opacity:1; transition:opacity .2s; }
     .overlay.hidden { opacity:0; pointer-events:none; }
     .btn { border:0; padding:14px 22px; font-size:18px; border-radius:999px; cursor:pointer; }
     a { color:#9cf; }
-    /* Splash screen */
-    .splash {
-      position:fixed; inset:0;
-      display:grid; place-items:center;
-      background:#000; color:#fff;
-      z-index:30;
-      transition: opacity .6s ease;
-    }
-    .splash-inner{ text-align:center; display:grid; gap:12px; place-items:center; }
-    .logo{
-      width:120px; height:120px; border-radius:24px; background:#111; display:grid; place-items:center;
-      box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size:54px;
-    }
-    .title{ font-size:22px; font-weight:700; letter-spacing:.4px; }
-    .note{ font-size:13px; opacity:.8; }
-    .splash.hidden { opacity:0; pointer-events:none; }
   </style>
 </head>
 <body>
-  <!-- Splash screen -->
-  <div id="splash" class="splash">
-    <div class="splash-inner">
-      <div class="logo">▶︎</div>
-      <div class="title">ExtraTV Live</div>
-      <div class="note">Caricamento…</div>
-    </div>
-  </div>
-
   <div class="topbar">
     <span>📺 ExtraTV Live</span>
     <div class="status" id="status">Pronto</div>
@@ -66,17 +41,16 @@
     const overlay = document.getElementById('overlay');
     const playBtn = document.getElementById('playBtn');
     const statusEl = document.getElementById('status');
-    const splash = document.getElementById('splash');
 
-    function hideSplash(){ splash.classList.add('hidden'); }
     function setStatus(t){ statusEl.textContent = t; }
 
-    function initSource(){
+    async function startPlayback(){
+      overlay.classList.add('hidden');
+      setStatus('Connessione…');
       try{
         if (window.Hls && Hls.isSupported()) {
           const hls = new Hls({ lowLatencyMode:true, enableWorker:true, maxBufferLength:20, liveBackBufferLength:30 });
           hls.on(Hls.Events.ERROR, (evt, data) => {
-            console.warn('HLS error', data);
             if (data.fatal) {
               switch(data.type){
                 case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
@@ -87,34 +61,27 @@
           });
           hls.loadSource(streamURL);
           hls.attachMedia(video);
-          setStatus('Sorgente pronta (premi ▶︎)');
+          video.addEventListener('loadedmetadata', () => video.play().catch(()=>{}));
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = streamURL; // Safari
-          setStatus('Sorgente pronta (premi ▶︎)');
+          video.src = streamURL;
+          await video.play();
         } else {
           setStatus('Browser non supporta HLS');
+          overlay.classList.remove('hidden');
         }
+        setStatus('In riproduzione');
       } catch(e){
         console.error(e);
-        setStatus('Errore nel caricamento sorgente');
+        setStatus('Tocca "Riproduci" per avviare');
+        overlay.classList.remove('hidden');
       }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Solo splash: niente autoplay, niente play() automatico
-      setTimeout(() => { hideSplash(); }, 1500);
-      // Prepara la sorgente dietro le quinte così il play manuale parte pronto
-      initSource();
+      if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) startPlayback();
     });
+    playBtn.addEventListener('click', startPlayback);
 
-    playBtn.addEventListener('click', () => {
-      overlay.classList.add('hidden');
-      // Il video parte quando l'utente preme ▶︎ nel controllo
-      // Qui non richiamiamo video.play() per evitare qualsiasi autoplay
-      setStatus('Pronto alla riproduzione');
-    });
-
-    // Service Worker per GitHub Pages
     if ('serviceWorker' in navigator) {
       const parts = location.pathname.split('/').filter(Boolean);
       const base = parts.length ? '/' + parts[0] + '/' : '/';
