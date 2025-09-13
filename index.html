@@ -58,7 +58,7 @@
         <p class="text-gray-600">Streaming dal vivo in corso.</p>
 
         <div class="video-container">
-            <video id="video" class="video-player" autoplay muted controls playsinline>
+            <video id="video" class="video-player" muted controls playsinline>
                 Il tuo browser non supporta il tag video.
             </video>
         </div>
@@ -90,15 +90,15 @@
             // Funzione per aggiornare il testo e lo stile del pulsante
             function updateButton() {
                 if (video.paused) {
-                    actionButton.textContent = 'Avvia';
+                    actionButton.textContent = 'Avvia Riproduzione';
                     actionButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
                     actionButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
                 } else if (video.muted) {
-                    actionButton.textContent = 'Attiva audio';
+                    actionButton.textContent = 'Attiva Audio';
                     actionButton.classList.remove('bg-gray-500', 'hover:bg-gray-600');
                     actionButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
                 } else {
-                    actionButton.textContent = 'Disattiva audio';
+                    actionButton.textContent = 'Disattiva Audio';
                     actionButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
                     actionButton.classList.add('bg-gray-500', 'hover:bg-gray-600');
                 }
@@ -107,26 +107,20 @@
             // Imposta la sorgente video e gestisce la riproduzione nativa
             video.src = videoUrl;
 
-            // Avvia la riproduzione del video una volta che i metadati sono caricati
-            video.addEventListener('loadedmetadata', () => {
-                video.play().catch(error => {
-                    console.error("Autoplay failed:", error);
-                    showMessage("Autoplay bloccato. Clicca sul pulsante per riprodurlo.");
-                    updateButton();
-                });
-            });
-
             // Event listener per il pulsante
             actionButton.addEventListener('click', () => {
                 if (video.paused) {
-                    video.play().catch(error => {
+                    video.play().then(() => {
+                        video.muted = false;
+                        updateButton();
+                    }).catch(error => {
                         console.error("Play failed:", error);
                         showMessage("Riproduzione fallita. Il browser ha bloccato l'azione.");
                     });
                 } else {
                     video.muted = !video.muted;
+                    updateButton();
                 }
-                updateButton();
             });
 
             // Sincronizza lo stato del pulsante se l'utente usa i controlli nativi del player
@@ -141,6 +135,9 @@
             video.addEventListener('pause', () => {
                 updateButton();
             });
+
+            // Stato iniziale
+            updateButton();
         });
     </script>
 </body>
