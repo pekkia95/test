@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ExtraTvLive</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2k5u16r+P0hN45d5aT5S4yL2z8j5XkY5rQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
@@ -78,14 +79,16 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             background-color: #000000;
         }
-        
-        /* Stili per l'iframe del player */
-        .video-player-iframe {
+
+        .video-player {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            object-fit: contain;
+            background-color: #000000;
+            border: none;
         }
 
         .button-group {
@@ -179,22 +182,26 @@
         <p class="text-xl font-bold text-gray-600 dark:text-gray-400">Streaming dal vivo, sempre con te.</p>
 
         <div class="video-container">
-            <iframe class="video-player-iframe"
-                src="https://rst2.saiuzwebnetwork.it:2020/VideoPlayer/extratvlive?autoplay=1"
-                scrolling="no" 
-                frameborder="0" 
-                allow="autoplay; picture-in-picture; fullscreen" 
-                allowfullscreen>
-            </iframe>
+            <video id="video" class="video-player" muted playsinline controls>
+                Il tuo browser non supporta il tag video.
+            </video>
         </div>
 
-        <p id="message-display" class="mt-2 text-sm text-gray-500 dark:text-gray-400">Il player video si caricherà a breve...</p>
+        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">Tocca due volte il video per la modalità Schermo Intero!</p>
 
         <div class="button-group">
-            <a href="https://www.extratvlive.it/ondemand/" target="_blank" class="app-button primary">
+            <button id="main-button" class="app-button primary">
+                Attiva Audio
+            </button>
+            <button id="pip-button" class="app-button secondary">
+                Entra in PiP
+            </button>
+            <a href="https://www.extratvlive.it/ondemand/" target="_blank" class="app-button secondary">
                 ExtraTvLive+
             </a>
         </div>
+
+        <p id="message-display" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></p>
 
         <div class="footer">
             <div class="footer-icons mt-2">
@@ -208,9 +215,17 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('video');
+            const mainButton = document.getElementById('main-button');
+            const pipButton = document.getElementById('pip-button');
+            const messageDisplay = document.getElementById('message-display');
             const splashScreen = document.getElementById('splash');
             const appContainer = document.getElementById('app-container');
 
+            // URL del flusso video
+            const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+            let hls;
+            
             // Funzione per mostrare il contenuto dell'app dopo lo splash screen
             function showApp() {
                 splashScreen.classList.add('hidden');
@@ -218,6 +233,152 @@
             }
 
             setTimeout(showApp, 2000);
+
+            // Funzione per mostrare un messaggio temporaneo
+            function showMessage(msg, duration = 3000) {
+                messageDisplay.textContent = msg;
+                setTimeout(() => {
+                    messageDisplay.textContent = '';
+                }, duration);
+            }
+
+            // Funzione per aggiornare il testo del pulsante principale
+            function updateMainButton() {
+                if (video.muted) {
+                    mainButton.textContent = 'Attiva Audio';
+                } else {
+                    mainButton.textContent = 'Disattiva Audio';
+                }
+            }
+
+            // Funzione per caricare il video con hls.js
+            function loadVideo() {
+                if (hls) {
+                    hls.destroy();
+                }
+                hls = new Hls();
+                hls.loadSource(videoUrl);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play().then(() => {
+                        updateMainButton();
+                    }).catch(error => {
+                        console.error("Play failed:", error);
+                        showMessage("Riproduzione automatica fallita. Premi il pulsante per avviare.");
+                        mainButton.textContent = 'Avvia Riproduzione';
+                        mainButton.removeEventListener('click', toggleMute);
+                        mainButton.addEventListener('click', manualPlay, {
+                            once: true
+                        });
+                    });
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('HLS.js error:', data);
+                    if (data.fatal) {
+                        showMessage(`Errore di streaming: ${data.details}. Riavvio in corso...`);
+                        setTimeout(() => loadVideo(), 1000);
+                    }
+                });
+            }
+            
+            // Funzione per avviare la riproduzione manualmente
+            function manualPlay() {
+                video.play().then(() => {
+                    video.muted = false;
+                    updateMainButton();
+                    mainButton.removeEventListener('click', manualPlay);
+                    mainButton.addEventListener('click', toggleMute);
+                }).catch(error => {
+                    console.error("Manual play failed:", error);
+                    showMessage("Riproduzione fallita. Il browser ha bloccato l'azione.");
+                });
+            }
+
+            // Funzione per attivare/disattivare l'audio
+            function toggleMute() {
+                video.muted = !video.muted;
+                updateMainButton();
+            }
+
+            if (Hls.isSupported()) {
+                loadVideo();
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Fallback per il supporto nativo in Safari
+                video.src = videoUrl;
+                video.play().catch(error => {
+                    console.error("Autoplay failed on native player:", error);
+                    showMessage("Riproduzione automatica fallita. Premi il pulsante per avviare.");
+                    mainButton.textContent = 'Avvia Riproduzione';
+                    mainButton.removeEventListener('click', toggleMute);
+                    mainButton.addEventListener('click', manualPlay, {
+                        once: true
+                    });
+                });
+            } else {
+                showMessage('Il tuo browser non supporta lo streaming HLS.');
+            }
+
+            // Event listener per il pulsante principale
+            mainButton.addEventListener('click', toggleMute);
+
+            // Event listener per il pulsante PiP
+            pipButton.addEventListener('click', () => {
+                // Assicurati che il video stia riproducendo prima di provare il PiP
+                if (document.pictureInPictureEnabled) {
+                    if (document.pictureInPictureElement) {
+                        document.exitPictureInPicture().catch(error => {
+                            console.error("Exit PiP failed:", error);
+                        });
+                    } else {
+                        // Se il video è in pausa, prova a riprodurlo prima
+                        if (video.paused) {
+                            video.play().catch(error => {
+                                console.error("Play failed before PiP request:", error);
+                                showMessage("Impossibile riprodurre il video. Riprova.");
+                                return;
+                            });
+                        }
+                        video.requestPictureInPicture().catch(error => {
+                            console.error("PiP failed:", error);
+                            showMessage("Impossibile entrare in modalità Schermo-in-Schermo. Riprova più tardi.");
+                        });
+                    }
+                } else {
+                    showMessage("Il PiP non è supportato dal tuo dispositivo.");
+                }
+            });
+
+            // Aggiungi un event listener per il doppio tocco
+            let lastClickTime = 0;
+            video.addEventListener('click', (e) => {
+                const clickTime = new Date().getTime();
+                if (clickTime - lastClickTime < 300) {
+                    // È un doppio tocco
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else if (video.webkitEnterFullscreen) { // Fallback for iOS Safari
+                         // If the video is already in fullscreen on iOS, exit it
+                         if (document.webkitFullscreenElement) {
+                            document.webkitExitFullscreen();
+                        } else {
+                            video.webkitEnterFullscreen();
+                        }
+                    } else if (video.requestFullscreen) {
+                        video.requestFullscreen();
+                    }
+                }
+                lastClickTime = clickTime;
+            });
+
+            // Sincronizza lo stato del pulsante se l'utente usa i controlli nativi del player
+            video.addEventListener('volumechange', updateMainButton);
+            video.addEventListener('play', updateMainButton);
+            video.addEventListener('pause', updateMainButton);
+
+            // Stato iniziale
+            updateMainButton();
         });
     </script>
 </body>
