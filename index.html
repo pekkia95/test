@@ -44,18 +44,16 @@
     <p class="text-xl font-semibold text-gray-600 dark:text-gray-300">Streaming dal vivo, sempre con te.</p>
 
     <div class="video-container mt-4">
-      <!-- NIENTE autoplay; mutato di default; niente crossorigin per iOS nativo -->
-      <video id="video" class="video-player" playsinline muted controls preload="metadata"
-             src="">
-        Il tuo browser non supporta il tag video.
-      </video>
+      <!-- iOS fix: niente autoplay; aggiungi attributi inline; audio off all'inizio -->
+      <video id="video" class="video-player" playsinline webkit-playsinline muted controls preload="metadata"></video>
     </div>
 
-    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Tocca <strong>Avvia Riproduzione</strong> (o il video) per iniziare. Doppio tap per Full‑Screen.</p>
+    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Premi <strong>Avvia Riproduzione</strong> o tocca il video. Doppio tap per Full‑Screen.</p>
 
     <div class="flex flex-wrap gap-3 justify-center mt-3">
-      <button id="main-button" class="px-5 py-3 rounded-full font-semibold shadow bg-[color:var(--brand)] text-white hover:opacity-90 min-w-[180px]">Avvia Riproduzione</button>
+      <button id="start-button" class="px-5 py-3 rounded-full font-semibold shadow bg-[color:var(--brand)] text-white hover:opacity-90 min-w-[190px]">Avvia Riproduzione</button>
       <button id="audio-button" class="px-5 py-3 rounded-full font-semibold shadow bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 min-w-[160px]">Attiva Audio</button>
+      <button id="reset-button" class="px-5 py-3 rounded-full font-semibold shadow bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 min-w-[180px]">Reinizializza player</button>
       <button id="pip-button" class="px-5 py-3 rounded-full font-semibold shadow bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 min-w-[160px]">Entra in PiP</button>
     </div>
 
@@ -74,11 +72,12 @@
   <script src="ios-install-hint.js" defer></script>
   <script>
     (function(){
-      const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+      const BASE = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
       const splash = document.getElementById('splash');
       const video = document.getElementById('video');
-      const mainBtn = document.getElementById('main-button');
+      const startBtn = document.getElementById('start-button');
       const audioBtn = document.getElementById('audio-button');
+      const resetBtn = document.getElementById('reset-button');
       const pipBtn = document.getElementById('pip-button');
       const msg = document.getElementById('msg');
       let hls, started = false;
@@ -90,51 +89,47 @@
       }
       window.addEventListener('load', ()=> setTimeout(()=> splash.classList.add('hidden'), 600));
 
-      function showMessage(text, t=3000){ msg.textContent = text; setTimeout(()=> msg.textContent='', t); }
-
       const isIOS = /iP(hone|ad|od)/.test(navigator.platform) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
+      function u() { return BASE + (BASE.includes('?') ? '&' : '?') + 'cb=' + Date.now(); }
+      function showMessage(t, ms=3000){ msg.textContent = t; setTimeout(()=> msg.textContent='', ms); }
 
-      async function startOnce(){
+      async function startPlayback(){
+        // Evita doppie partenze
         if (started) return;
         started = true;
         try { if (hls) { hls.destroy(); hls = null; } } catch(e){}
+        // Reset hard prima di assegnare src (fix primo frame)
+        try { video.pause(); video.removeAttribute('src'); video.load(); } catch(e){}
         if (isIOS || !window.Hls || !Hls.isSupported()){
-          // iOS nativo: niente crossorigin, partire MUTED
           video.removeAttribute('crossorigin');
-          video.src = videoUrl;
+          video.src = u(); // cache bust
           video.load();
-          try { await video.play(); } catch(e) { showMessage('Premi di nuovo Avvia se non parte.'); }
+          try { await video.play(); } catch(e) { showMessage('Ritenta: tocca Avvia o tocca il video.'); }
         } else {
-          // hls.js per altri browser
           try { video.setAttribute('crossorigin', 'anonymous'); } catch(e){}
           hls = new Hls({ manifestLoadingTimeOut: 10000, liveSyncDuration: 3, liveMaxLatencyDuration: 10, liveDuration: 30 });
-          hls.loadSource(videoUrl);
+          hls.loadSource(u());
           hls.attachMedia(video);
           hls.on(Hls.Events.MEDIA_ATTACHED, () => video.play().catch(()=>{}));
         }
       }
 
-      function toggleAudio(){
-        // NON smutare automaticamente alla partenza per evitare blocchi su iOS/PWA
-        video.muted = !video.muted;
-        audioBtn.textContent = video.muted ? 'Attiva Audio' : 'Disattiva Audio';
-      }
+      function toggleAudio(){ video.muted = !video.muted; audioBtn.textContent = video.muted ? 'Attiva Audio' : 'Disattiva Audio'; }
+      async function resetPlayer(){ started = false; try { if (hls) { hls.destroy(); hls = null; } } catch(e){} try { video.pause(); video.removeAttribute('src'); video.load(); } catch(e){} showMessage('Player reinizializzato. Premi Avvia.'); }
 
-      mainBtn.addEventListener('click', startOnce);
-      // Avvio anche toccando il video (tap singolo)
-      video.addEventListener('touchend', startOnce, { once: true, passive: true });
-      video.addEventListener('click', startOnce, { once: true });
-
+      startBtn.addEventListener('click', startPlayback);
+      video.addEventListener('touchend', startPlayback, { once: true, passive: true });
+      video.addEventListener('click', startPlayback, { once: true });
       audioBtn.addEventListener('click', toggleAudio);
+      resetBtn.addEventListener('click', resetPlayer);
 
-      // PiP
       pipBtn.addEventListener('click', async () => {
         if (!('pictureInPictureEnabled' in document)) return showMessage('Il PiP non è supportato.');
         try { if(document.pictureInPictureElement){ await document.exitPictureInPicture(); } else { if(video.paused) await video.play(); await video.requestPictureInPicture(); } }
         catch(e){ showMessage('Impossibile attivare PiP.'); }
       });
 
-      // Doppio tap = full screen
+      // Doppio tap per fullscreen
       let lastTap = 0;
       video.addEventListener('click', (ev)=>{
         const now = Date.now();
@@ -146,9 +141,7 @@
         lastTap = now;
       });
 
-      // Alcuni iOS mostrano solo il primo frame finché non c'è play attivo; se va in pausa, riprova
-      video.addEventListener('pause', () => { /* opzionale: potresti voler evitare autoplay loop */ });
-      video.addEventListener('error', () => { console.warn('Video error code:', video.error && video.error.code); });
+      video.addEventListener('error', ()=> console.warn('Video error code:', video.error && video.error.code));
     })();
   </script>
 </body>
