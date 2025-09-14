@@ -1,376 +1,201 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ExtraTvLive</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2k5u16r+P0hN45d5aT5S4yL2z8j5XkY5rQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ExtraTvLive">
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon-180x180.png">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ExtraTvLive</title>
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: #1f2937;
-            overflow-x: hidden;
-        }
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- HLS.js solo dove serve (non iOS Safari) -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-        .splash-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #f97316;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 1;
-            transition: opacity 1s ease-in-out;
-            font-size: 2rem;
-            font-weight: 700;
-            color: #fff;
-        }
+  <!-- Font & Icons -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-        .splash-screen.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
+  <!-- Manifest PWA -->
+  <link rel="manifest" href="manifest.json" />
 
-        .container {
-            width: 100%;
-            max-width: 600px;
-            padding: 1rem;
-            background-color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            text-align: center;
-            opacity: 0;
-            transition: opacity 1s ease-in-out;
-            box-sizing: border-box;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            border-radius: 1rem;
-        }
+  <!-- iOS PWA metas -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ExtraTvLive" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180x180.png" />
 
-        .container.visible {
-            opacity: 1;
-        }
+  <!-- Tema per barra indirizzi/splash -->
+  <meta name="theme-color" content="#f97316" />
 
-        .video-container {
-            position: relative;
-            width: 100%;
-            padding-top: 56.25%;
-            border-radius: 1rem;
-            overflow: hidden;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            background-color: #000000;
-        }
+  <style>
+    :root { --brand:#f97316; }
+    body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .safe { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 
-        .video-player {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            background-color: #000000;
-            border: none;
-        }
+    .splash-screen { position:fixed; inset:0; background:#f97316; display:flex; align-items:center; justify-content:center; z-index:50; opacity:1; transition:opacity 600ms ease; }
+    .splash-screen.hidden { opacity:0; pointer-events:none; }
 
-        .button-group {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
+    .container { max-width:600px; margin: max(1rem, env(safe-area-inset-top)) auto 1rem; padding:1rem; border-radius:1rem; box-shadow:0 4px 10px rgba(0,0,0,.05); transition:opacity 400ms ease; }
+    .video-container { position:relative; width:100%; padding-top:56.25%; border-radius:1rem; overflow:hidden; background:#000; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05); }
+    .video-player { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; border:none; }
 
-        .app-button {
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            transition-property: all;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 300ms;
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            min-width: 150px;
-            text-align: center;
-            text-decoration: none;
-        }
-
-        .app-button.primary {
-            background-color: #f97316;
-            color: #fff;
-        }
-
-        .app-button.primary:hover {
-            background-color: #ea580c;
-        }
-
-        .app-button.secondary {
-            background-color: #e5e7eb;
-            color: #4b5563;
-        }
-
-        .app-button.secondary:hover {
-            background-color: #d1d5db;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #1e1e1e;
-                color: #e5e7eb;
-            }
-
-            .container {
-                background-color: #1e1e1e;
-                box-shadow: 0 4px 10px rgba(255, 255, 255, 0.05);
-            }
-
-            .app-button.secondary {
-                background-color: #374151;
-                color: #d1d5db;
-            }
-
-            .app-button.secondary:hover {
-                background-color: #4b5563;
-            }
-        }
-
-        .footer {
-            margin-top: 2rem;
-            padding: 1rem;
-            text-align: center;
-            color: #9ca3af;
-        }
-
-        .footer-icons a {
-            font-size: 1.5rem;
-            margin: 0 0.5rem;
-            transition: color 0.3s ease;
-        }
-
-        .footer-icons a:hover {
-            color: #f97316;
-        }
-    </style>
+    @media (prefers-color-scheme: dark){
+      body { background:#1e1e1e; color:#e5e7eb; }
+      .container { background:#1e1e1e; box-shadow:0 4px 10px rgba(255,255,255,.05); }
+    }
+  </style>
 </head>
+<body class="bg-white text-gray-800">
+  <!-- Splash -->
+  <div id="splash" class="splash-screen">
+    <h1 class="text-3xl font-bold text-white">ExtraTvLive</h1>
+  </div>
 
-<body>
-    <div id="splash" class="splash-screen">
-        <h1 class="text-3xl font-bold text-white">ExtraTvLive</h1>
+  <main id="app" class="container bg-white dark:bg-[#1e1e1e] safe">
+    <h1 class="text-3xl font-bold text-orange-500">ExtraTvLive</h1>
+    <p class="text-xl font-semibold text-gray-600 dark:text-gray-300">Streaming dal vivo, sempre con te.</p>
+
+    <div class="video-container mt-4">
+      <video id="video" class="video-player" playsinline muted autoplay controls
+             src="https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8">
+        Il tuo browser non supporta il tag video.
+      </video>
     </div>
 
-    <div id="app-container" class="container">
-        <h1 class="text-3xl font-bold text-orange-500">ExtraTvLive</h1>
-        <p class="text-xl font-bold text-gray-600 dark:text-gray-400">Streaming dal vivo, sempre con te.</p>
+    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Doppio tap sul video per entrare/uscire dal <strong>full‑screen</strong>.</p>
 
-        <div class="video-container">
-            <video id="video" class="video-player" muted playsinline controls crossorigin="anonymous">
-                Il tuo browser non supporta il tag video.
-            </video>
-        </div>
-
-        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">Tocca due volte il video per la modalità Schermo Intero!</p>
-
-        <div class="button-group">
-            <button id="main-button" class="app-button primary">
-                Avvia Riproduzione
-            </button>
-            <button id="pip-button" class="app-button secondary">
-                Entra in PiP
-            </button>
-            <a href="https://www.extratvlive.it/ondemand/" target="_blank" class="app-button secondary">
-                ExtraTvLive+
-            </a>
-        </div>
-
-        <p id="message-display" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></p>
-
-        <div class="footer">
-            <div class="footer-icons mt-2">
-                <a href="https://www.facebook.com/extratvitaly" target="_blank"><i class="fa-brands fa-facebook-square"></i></a>
-                <a href="https://www.instagram.com/extratv_official/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
-                <a href="https://www.youtube.com/@ExtraTvItaly" target="_blank"><i class="fa-brands fa-youtube-square"></i></a>
-            </div>
-            <p class="text-xs mt-2">&copy; 2024 ExtraTv Live. Tutti i diritti riservati.</p>
-        </div>
+    <div class="flex flex-wrap gap-3 justify-center mt-3">
+      <button id="main-button" class="px-5 py-3 rounded-full font-semibold shadow bg-[color:var(--brand)] text-white hover:opacity-90 min-w-[160px]">Avvia Riproduzione</button>
+      <button id="pip-button" class="px-5 py-3 rounded-full font-semibold shadow bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 min-w-[160px]">Entra in PiP</button>
+      <a href="https://www.extratvlive.it/ondemand/" target="_blank" rel="noopener" class="px-5 py-3 rounded-full font-semibold shadow bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 min-w-[160px]">ExtraTvLive+</a>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const video = document.getElementById('video');
-            const mainButton = document.getElementById('main-button');
-            const pipButton = document.getElementById('pip-button');
-            const messageDisplay = document.getElementById('message-display');
-            const splashScreen = document.getElementById('splash');
-            const appContainer = document.getElementById('app-container');
-            const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
-            let hls;
+    <p id="msg" class="text-sm text-gray-500 dark:text-gray-400 mt-1"></p>
 
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('service-worker.js').then(registration => {
-                        console.log('Service Worker registrato con successo:', registration.scope);
-                    }).catch(error => {
-                        console.log('Registrazione del Service Worker fallita:', error);
-                    });
-                });
-            }
+    <footer class="mt-6 text-center">
+      <div class="space-x-3 text-2xl">
+        <a href="https://www.facebook.com/extratvitaly" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-square"></i></a>
+        <a href="https://www.instagram.com/extratv_official/" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.youtube.com/@ExtraTvItaly" target="_blank" rel="noopener"><i class="fa-brands fa-youtube-square"></i></a>
+      </div>
+      <p class="text-xs text-gray-400 mt-2">© 2025 ExtraTv Live. Tutti i diritti riservati.</p>
+    </footer>
+  </main>
 
-            function showApp() {
-                splashScreen.classList.add('hidden');
-                appContainer.classList.add('visible');
-            }
-            setTimeout(showApp, 2000);
+  <script src="ios-install-hint.js" defer></script>
+  <script>
+    (function(){
+      const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+      const splash = document.getElementById('splash');
+      const video = document.getElementById('video');
+      const mainBtn = document.getElementById('main-button');
+      const pipBtn = document.getElementById('pip-button');
+      const msg = document.getElementById('msg');
+      let hls;
 
-            function showMessage(msg, duration = 3000) {
-                messageDisplay.textContent = msg;
-                setTimeout(() => {
-                    messageDisplay.textContent = '';
-                }, duration);
-            }
-
-            function updateMainButton() {
-                if (video.paused) {
-                    mainButton.textContent = 'Avvia Riproduzione';
-                } else if (video.muted) {
-                    mainButton.textContent = 'Attiva Audio';
-                } else {
-                    mainButton.textContent = 'Disattiva Audio';
-                }
-            }
-            
-            function loadVideo() {
-                if (Hls.isSupported()) {
-                    if (hls) { hls.destroy(); }
-                    hls = new Hls({
-                        manifestLoadingTimeOut: 10000,
-                        liveSyncDuration: 3,
-                        liveMaxLatencyDuration: 10,
-                        liveDuration: 30
-                    });
-
-                    hls.loadSource(videoUrl);
-                    hls.attachMedia(video);
-
-                    hls.on(Hls.Events.ERROR, (event, data) => {
-                        console.error('HLS.js error:', data);
-                        if (data.fatal) {
-                            switch(data.type) {
-                                case Hls.ErrorTypes.NETWORK_ERROR:
-                                    showMessage(`Errore di rete: ${data.details}. Riprovo...`);
-                                    setTimeout(() => loadVideo(), 2000);
-                                    break;
-                                case Hls.ErrorTypes.MEDIA_ERROR:
-                                    showMessage(`Errore media: ${data.details}. Riavvio del player...`);
-                                    setTimeout(() => loadVideo(), 2000);
-                                    break;
-                                default:
-                                    hls.destroy();
-                                    showMessage('Errore critico. Riavvio in corso...');
-                                    setTimeout(() => loadVideo(), 2000);
-                                    break;
-                            }
-                        }
-                    });
-                } else {
-                    video.src = videoUrl;
-                }
-            }
-
-            loadVideo();
-
-            video.addEventListener('touchstart', () => {
-                video.muted = true;
-                video.play().then(() => {
-                    video.muted = false;
-                    updateMainButton();
-                }).catch(error => {
-                    console.error("Riproduzione fallita al tocco:", error);
-                    showMessage("Riproduzione fallita. Il browser potrebbe aver bloccato l'azione.");
-                });
-            }, { once: true });
-
-            mainButton.addEventListener('click', () => {
-                if (video.paused) {
-                    video.play().then(() => {
-                        video.muted = false;
-                        updateMainButton();
-                    }).catch(error => {
-                        console.error("Riproduzione fallita:", error);
-                        showMessage("Riproduzione fallita. Il browser potrebbe aver bloccato l'azione.");
-                    });
-                } else {
-                    video.muted = !video.muted;
-                    updateMainButton();
-                }
-            });
-
-            pipButton.addEventListener('click', () => {
-                if (document.pictureInPictureEnabled) {
-                    if (document.pictureInPictureElement) {
-                        document.exitPictureInPicture().catch(error => {
-                            console.error("Exit PiP failed:", error);
-                        });
-                    } else {
-                        if (video.paused) {
-                            video.play().catch(error => {
-                                console.error("Play failed before PiP request:", error);
-                                showMessage("Impossibile riprodurre il video. Riprova.");
-                                return;
-                            });
-                        }
-                        video.requestPictureInPicture().catch(error => {
-                            console.error("PiP failed:", error);
-                            showMessage("Impossibile entrare in modalità Schermo-in-Schermo. Riprova più tardi.");
-                        });
-                    }
-                } else {
-                    showMessage("Il PiP non è supportato dal tuo dispositivo.");
-                }
-            });
-
-            let lastClickTime = 0;
-            video.addEventListener('click', (e) => {
-                const clickTime = new Date().getTime();
-                if (clickTime - lastClickTime < 300) {
-                    if (document.fullscreenElement) {
-                        document.exitFullscreen();
-                    } else if (video.webkitEnterFullscreen) {
-                         if (document.webkitFullscreenElement) {
-                            document.webkitExitFullscreen();
-                        } else {
-                            video.webkitEnterFullscreen();
-                        }
-                    } else if (video.requestFullscreen) {
-                        video.requestFullscreen();
-                    }
-                }
-                lastClickTime = clickTime;
-            });
-
-            video.addEventListener('play', updateMainButton);
-            video.addEventListener('pause', updateMainButton);
-            video.addEventListener('volumechange', updateMainButton);
-            updateMainButton();
+      // Service Worker
+      if ('serviceWorker' in navigator){
+        window.addEventListener('load', ()=>{
+          navigator.serviceWorker.register('/service-worker.js').catch(console.warn);
         });
-    </script>
-</body>
+      }
 
+      // Splash hide
+      window.addEventListener('load', ()=> setTimeout(()=> splash.classList.add('hidden'), 600));
+
+      function showMessage(text, t=3000){ msg.textContent = text; setTimeout(()=> msg.textContent='', t); }
+      function updateMain(){
+        if(video.paused) mainBtn.textContent = 'Avvia Riproduzione';
+        else if (video.muted) mainBtn.textContent = 'Attiva Audio';
+        else mainBtn.textContent = 'Disattiva Audio';
+      }
+
+      const isIOS = /iP(hone|ad|od)/.test(navigator.platform) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
+
+      async function loadVideo(){
+        try { if (hls) { hls.destroy(); hls = null; } } catch(e){}
+        if (isIOS || !window.Hls || !Hls.isSupported()){
+          // HLS nativo iOS: nessun crossorigin
+          video.removeAttribute('crossorigin');
+          video.src = videoUrl;
+          video.load();
+          try { await video.play(); } catch(e) { showMessage('Tocca "Avvia Riproduzione" per iniziare.'); }
+        } else {
+          try { video.setAttribute('crossorigin', 'anonymous'); } catch(e){}
+          hls = new Hls({
+            manifestLoadingTimeOut: 10000,
+            liveSyncDuration: 3,
+            liveMaxLatencyDuration: 10,
+            liveDuration: 30
+          });
+          hls.loadSource(videoUrl);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MEDIA_ATTACHED, () => video.play().catch(()=>{}));
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            console.error('HLS.js error:', data);
+            if (data.fatal) {
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  showMessage(`Errore di rete: ${data.details}. Riprovo...`);
+                  setTimeout(loadVideo, 1500);
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  showMessage(`Errore media: ${data.details}. Riavvio...`);
+                  setTimeout(loadVideo, 1500);
+                  break;
+                default:
+                  try { hls.destroy(); } catch(e){}
+                  showMessage('Errore critico. Riavvio...');
+                  setTimeout(loadVideo, 1500);
+              }
+            }
+          });
+        }
+      }
+
+      video.addEventListener('canplay', async () => {
+        if (video.paused) { try { await video.play(); } catch(e){} }
+      });
+
+      mainBtn.addEventListener('click', async () => {
+        if (video.paused) {
+          try { await video.play(); video.muted = false; } catch(e) { showMessage('Il browser ha bloccato la riproduzione.'); }
+        } else {
+          video.muted = !video.muted;
+        }
+        updateMain();
+      });
+
+      pipBtn.addEventListener('click', async () => {
+        if (!('pictureInPictureEnabled' in document)) return showMessage('Il PiP non è supportato.');
+        try{
+          if(document.pictureInPictureElement){ await document.exitPictureInPicture(); }
+          else { if(video.paused) await video.play(); await video.requestPictureInPicture(); }
+        }catch(e){ console.warn('PiP failed', e); showMessage('Impossibile attivare PiP.'); }
+      });
+
+      // Doppio tap full‑screen
+      let lastTap = 0;
+      video.addEventListener('click', ()=>{
+        const now = Date.now();
+        if(now - lastTap < 300){
+          if(document.fullscreenElement){ document.exitFullscreen(); }
+          else if(video.webkitEnterFullscreen){
+            if(document.webkitFullscreenElement) document.webkitExitFullscreen();
+            else video.webkitEnterFullscreen();
+          } else if(video.requestFullscreen){ video.requestFullscreen(); }
+        }
+        lastTap = now;
+      });
+
+      video.addEventListener('error', () => {
+        const err = video.error;
+        console.warn('Video tag error:', err && err.code);
+      });
+
+      loadVideo();
+      updateMain();
+    })();
+  </script>
+</body>
 </html>
