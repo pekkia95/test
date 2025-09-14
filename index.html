@@ -185,11 +185,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1rem;
+            gap: 0.5rem; /* Ridotto lo spazio tra gli elementi */
             z-index: 999;
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease, visibility 0.3s ease;
+            position: relative; /* Aggiunto per il posizionamento del pulsante di chiusura */
         }
         #install-popup.show {
             opacity: 1;
@@ -200,6 +201,18 @@
             width: 3rem; /* Ridimensionato a 48px */
             height: 3rem;
             color: #4b5563; /* Colore più neutro */
+        }
+
+        #close-popup-button {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #9ca3af;
+            cursor: pointer;
+            line-height: 1;
         }
     </style>
 </head>
@@ -249,15 +262,14 @@
     </div>
 
     <div id="install-popup">
+        <button id="close-popup-button">&times;</button>
         <p class="text-center font-bold text-lg">Installa l'app ExtraTvLive</p>
         <p class="text-center text-sm">1. Tocca l'icona di condivisione <br/> nella barra di navigazione di Safari.</p>
-        <div class="text-center my-4">
-            <svg class="share-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <div class="text-center my-2"> <svg class="share-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M16 11.5L12.5 8V16H11.5V8L8 11.5L7.5 11L12 6.5L16.5 11L16 11.5ZM16.5 18H7.5V17H16.5V18ZM17.5 19H6.5V18H17.5V19Z" fill="currentColor"/>
             </svg>
         </div>
-        <p class="text-center text-sm mt-2">2. Poi tocca 'Aggiungi a schermata Home'.</p>
-    </div>
+        <p class="text-center text-sm mt-1">2. Poi tocca 'Aggiungi a schermata Home'.</p> </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -269,6 +281,7 @@
             const splashScreen = document.getElementById('splash');
             const appContainer = document.getElementById('app-container');
             const installPopup = document.getElementById('install-popup');
+            const closePopupButton = document.getElementById('close-popup-button');
             
             // Logica per mostrare il contenuto dell'app dopo lo splash screen
             function showApp() {
@@ -322,7 +335,12 @@
                 installPopup.classList.add('show');
                 setTimeout(() => {
                     installPopup.classList.remove('show');
-                }, 8000); // Nasconde il pop-up dopo 8 secondi
+                }, 10000); // Nasconde il pop-up dopo 10 secondi
+            }
+
+            // Funzione per nascondere il pop-up
+            function hideInstallPopup() {
+                installPopup.classList.remove('show');
             }
 
             // Funzione per aggiornare il testo del pulsante principale
@@ -436,6 +454,9 @@
                 e.preventDefault();
                 showInstallPopup();
             });
+
+            // Nuovo event listener per il pulsante di chiusura del pop-up
+            closePopupButton.addEventListener('click', hideInstallPopup);
 
             // Aggiungi un event listener per il doppio tocco
             let lastClickTime = 0;
