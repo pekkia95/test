@@ -47,11 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Gestisce il click sul pulsante di installazione
     installButton.addEventListener('click', () => {
-        // Se è un dispositivo iOS, mostra le istruzioni
+        // Se è un dispositivo iOS, mostra le istruzioni con le icone
         if (isiOS()) {
             if (installPromptContainer) {
                 installPromptContainer.innerHTML = `
-                    <p>Per installare l'app, tocca l'icona di **Condividi** nella barra del browser e seleziona **"Aggiungi a schermata Home"**.</p>
+                    <p>Per installare, tocca <i class="fas fa-arrow-up-from-bracket"></i> poi <i class="fas fa-square-plus"></i></p>
                 `;
                 installPromptContainer.style.display = 'block';
             }
