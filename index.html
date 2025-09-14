@@ -212,7 +212,7 @@
                 <a href="https://www.instagram.com/extratv_official/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
                 <a href="https://www.youtube.com/@ExtraTvItaly" target="_blank"><i class="fa-brands fa-youtube-square"></i></a>
             </div>
-            <p class="text-xs mt-2">&copy; 2024 ExtraTv Live. Tutti i diritti riservati.</p>
+            <p class="text-xs mt-2">© 2024 ExtraTv Live. Tutti i diritti riservati.</p>
         </div>
     </div>
 
@@ -225,6 +225,14 @@
             const splashScreen = document.getElementById('splash');
             const appContainer = document.getElementById('app-container');
 
+            // Logica per nascondere il pulsante PiP su iOS in modalità standalone
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isStandalone = (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone);
+
+            if (isIOS && isStandalone) {
+                pipButton.style.display = 'none';
+            }
+            
             // URL del flusso video
             const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
             let hls;
