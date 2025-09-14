@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isiOS()) {
         if (installPromptContainer && !window.matchMedia('(display-mode: standalone)').matches) {
             installPromptContainer.innerHTML = `
-                <p>Per installare l'app, tocca l'icona "Condividi" poi "Aggiungi a schermata Home"**.</p>
+                <p>Per installare l'app, tocca l'icona "Condividi" poi "Aggiungi a schermata Home".</p>
             `;
             installPromptContainer.style.display = 'block';
         }
