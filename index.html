@@ -7,9 +7,7 @@
     <title>ExtraTvLive</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-        xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2k5u16r+P0hN45d5aT5S4yL2z8j5XkY5rQ=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2k5u16r+P0hN45d5aT5S4yL2z8j5XkY5rQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -23,428 +21,171 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            color: #1f2937;
-            overflow-x: hidden;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            position: relative;
         }
 
-        /* Stile per la splash screen */
-        .splash-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #f97316;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 1;
-            transition: opacity 1s ease-in-out;
-            font-size: 2rem;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .splash-screen.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 600px;
-            padding: 1rem;
-            background-color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            text-align: center;
-            opacity: 0;
-            transition: opacity 1s ease-in-out;
-            box-sizing: border-box;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            border-radius: 1rem;
-        }
-
-        .container.visible {
-            opacity: 1;
-        }
-
-        .video-container {
+        #video-container {
             position: relative;
             width: 100%;
-            padding-top: 56.25%;
-            border-radius: 1rem;
-            overflow: hidden;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            background-color: #000000;
+            height: 100%;
         }
 
-        .video-player {
-            position: absolute;
-            top: 0;
-            left: 0;
+        #video-player {
             width: 100%;
             height: 100%;
-            object-fit: contain;
-            background-color: #000000;
-            border: none;
+            background-color: #000;
         }
 
-        .button-group {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .app-button {
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            transition-property: all;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 300ms;
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            min-width: 150px;
-            text-align: center;
-            text-decoration: none;
-        }
-
-        .app-button.primary {
-            background-color: #f97316;
-            color: #fff;
-        }
-
-        .app-button.primary:hover {
-            background-color: #ea580c;
-        }
-
-        .app-button.secondary {
-            background-color: #e5e7eb;
-            color: #4b5563;
-        }
-
-        .app-button.secondary:hover {
-            background-color: #d1d5db;
-        }
-
-        /* Tema scuro per tutti gli elementi */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #1e1e1e;
-                color: #e5e7eb;
-            }
-
-            .container {
-                background-color: #1e1e1e;
-                box-shadow: 0 4px 10px rgba(255, 255, 255, 0.05);
-            }
-
-            .app-button.secondary {
-                background-color: #374151;
-                color: #d1d5db;
-            }
-
-            .app-button.secondary:hover {
-                background-color: #4b5563;
-            }
-        }
-
-        .footer {
-            margin-top: 2rem;
-            padding: 1rem;
-            text-align: center;
-            color: #9ca3af;
-        }
-
-        .footer-icons a {
-            font-size: 1.5rem;
-            margin: 0 0.5rem;
-            transition: color 0.3s ease;
-        }
-
-        .footer-icons a:hover {
-            color: #f97316;
-        }
-
-        /* Stile per il pop-up di installazione */
-        #install-popup {
-            position: fixed;
-            bottom: 60px; /* Posiziona sopra la barra di navigazione di Safari */
+        #main-button {
+            position: absolute;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            width: 90%;
-            max-width: 350px;
-            background: #fff;
-            color: #1f2937;
-            padding: 1rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            background-color: #f2f2f2;
+            color: #171717;
+            border: none;
+            border-radius: 9999px;
+            width: 60px;
+            height: 60px;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 1rem;
-            z-index: 999;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s ease-in-out;
         }
-        #install-popup.show {
-            opacity: 1;
-            visibility: visible;
+
+        #main-button:hover {
+            background-color: #e5e5e5;
+            transform: translateX(-50%) scale(1.05);
         }
-        #install-popup img {
+
+        .icon {
+            font-size: 2.5rem;
+        }
+
+        .player-controls {
+            position: absolute;
+            bottom: 0;
             width: 100%;
-            height: auto;
-            border-radius: 0.5rem;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .volume-range {
+            width: 80px;
+        }
+
+        /* Fullscreen styles */
+        .full-screen-container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9999;
         }
     </style>
 </head>
 
 <body>
-    <div id="splash" class="splash-screen">
-        <h1 class="text-3xl font-bold text-white">ExtraTvLive</h1>
+    <div id="video-container">
+        <video id="video-player" playsinline></video>
+        <button id="main-button">
+            <i id="main-icon" class="fa-solid"></i>
+        </button>
     </div>
 
-    <div id="app-container" class="container">
-        <h1 class="text-3xl font-bold text-orange-500">ExtraTvLive</h1>
-        <p class="text-xl font-bold text-gray-600 dark:text-gray-400">Streaming dal vivo, sempre con te.</p>
-
-        <div class="video-container">
-            <video id="video" class="video-player" muted playsinline controls>
-                Il tuo browser non supporta il tag video.
-            </video>
+    <div id="install-popup" class="fixed inset-x-4 bottom-8 flex flex-col items-center justify-center p-4 bg-white shadow-xl rounded-lg border border-gray-200 z-50 transform scale-100 opacity-100 transition-transform duration-300">
+        <div class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 cursor-pointer text-2xl" onclick="hideInstallPopup()">
+            <i class="fa-solid fa-xmark"></i>
         </div>
-
-        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">Tocca due volte il video per la modalità Schermo Intero!</p>
-
-        <div class="button-group">
-            <button id="main-button" class="app-button primary">
-                Attiva Audio
-            </button>
-            <button id="pip-button" class="app-button secondary">
-                Entra in PiP
-            </button>
-            <a href="#" id="install-button" class="app-button secondary" style="display:none;">
-                Installa App
-            </a>
-            <a href="https://www.extratvlive.it/ondemand/" target="_blank" class="app-button secondary">
-                ExtraTvLive+
-            </a>
-        </div>
-
-        <p id="message-display" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></p>
-
-        <div class="footer">
-            <div class="footer-icons mt-2">
-                <a href="https://www.facebook.com/extratvitaly" target="_blank"><i
-                        class="fa-brands fa-facebook-square"></i></a>
-                <a href="https://www.instagram.com/extratv_official/" target="_blank"><i
-                        class="fa-brands fa-instagram"></i></a>
-                <a href="https://www.youtube.com/@ExtraTvItaly" target="_blank"><i
-                        class="fa-brands fa-youtube-square"></i></a>
+        <div class="text-center">
+            <div class="mb-4">
+                <h3 class="text-xl font-bold text-gray-900">Installa sul tuo iPhone</h3>
+                <p class="text-gray-600 mt-2">
+                    Per installare l'app, tocca il pulsante
+                    <span class="inline-flex items-center justify-center w-8 h-8 mx-1">
+                        <svg fill="currentColor" class="w-6 h-6" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 21H5a2 2 0 01-2-2V9a2 2 0 012-2h3V5a2 2 0 012-2h4a2 2 0 012 2v2h3a2 2 0 012 2v10a2 2 0 01-2 2zM5 9v10h14V9h-3V7a2 2 0 01-2-2H10a2 2 0 01-2 2v2H5zM12 11a1 1 0 00-1 1v4a1 1 0 002 0v-4a1 1 0 00-1-1zm0 2a1 1 0 01-1 1v1a1 1 0 012 0v-1a1 1 0 01-1-1z" clip-rule="evenodd" fill-rule="evenodd"/>
+                        </svg>
+                    </span>
+                    e seleziona "Aggiungi a schermata Home".
+                </p>
             </div>
-            <p class="text-xs mt-2">© 2024 ExtraTv Live. Tutti i diritti riservati.</p>
         </div>
     </div>
 
-    <div id="install-popup">
-        <p class="text-center font-bold text-lg">Installa l'app ExtraTvLive</p>
-        <p class="text-center text-sm">1. Tocca l'icona di condivisione <br/> nella barra di navigazione di Safari.</p>
-        <img src="https://i.imgur.com/K3Ea87O.png" alt="Istruzioni per l'installazione su Safari">
-        <p class="text-center text-sm mt-2">2. Poi tocca 'Aggiungi a schermata Home'.</p>
-    </div>
 
     <script>
-        // Logica per mostrare il contenuto dell'app dopo lo splash screen
-        const splashScreen = document.getElementById('splash');
-        const appContainer = document.getElementById('app-container');
-        function showApp() {
-            splashScreen.classList.add('hidden');
-            appContainer.classList.add('visible');
-        }
-        setTimeout(showApp, 2000);
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const video = document.getElementById('video');
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('video-player');
             const mainButton = document.getElementById('main-button');
-            const pipButton = document.getElementById('pip-button');
-            const installButton = document.getElementById('install-button');
-            const messageDisplay = document.getElementById('message-display');
-            const installPopup = document.getElementById('install-popup'); // Riferimento al pop-up
+            const mainIcon = document.getElementById('main-icon');
+            const installPopup = document.getElementById('install-popup');
+            let isPaused = true;
 
-            // Logica per nascondere il pulsante PiP su iOS in modalità standalone
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const isStandalone = (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone);
-
-            if (isIOS && isStandalone) {
-                pipButton.style.display = 'none';
-            }
-
-            // Funzione per mostrare o nascondere il pulsante di installazione PWA
-            function checkPWAInstallability() {
-                if (isIOS && !isStandalone) {
-                    installButton.style.display = 'block';
-                } else {
-                    installButton.style.display = 'none';
-                }
-            }
-
-            // URL del flusso video
-            const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
-            let hls;
-
-            // Registra il service worker per il supporto PWA
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/service-worker.js').then(registration => {
-                        console.log('Service Worker registrato con successo:', registration.scope);
-                    }).catch(error => {
-                        console.log('Registrazione del Service Worker fallita:', error);
-                    });
-                });
-            }
-
-            // Funzione per mostrare un messaggio temporaneo
-            function showMessage(msg, duration = 3000) {
-                messageDisplay.textContent = msg;
-                setTimeout(() => {
-                    messageDisplay.textContent = '';
-                }, duration);
-            }
-
-            // Funzione per mostrare il pop-up di installazione
-            function showInstallPopup() {
-                installPopup.classList.add('show');
-                setTimeout(() => {
-                    installPopup.classList.remove('show');
-                }, 8000); // Nasconde il pop-up dopo 8 secondi
-            }
-
-            // Funzione per aggiornare il testo del pulsante principale
             function updateMainButton() {
-                if (video.muted) {
-                    mainButton.textContent = 'Attiva Audio';
+                if (video.paused) {
+                    mainIcon.classList.remove('fa-pause');
+                    mainIcon.classList.add('fa-play');
                 } else {
-                    mainButton.textContent = 'Disattiva Audio';
+                    mainIcon.classList.remove('fa-play');
+                    mainIcon.classList.add('fa-pause');
                 }
             }
 
-            // Funzione per caricare il video con hls.js
-            function loadVideo() {
-                if (hls) {
-                    hls.destroy();
-                }
-                hls = new Hls();
-                hls.loadSource(videoUrl);
-                hls.attachMedia(video);
-
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.play().then(() => {
-                        updateMainButton();
-                    }).catch(error => {
-                        console.error("Play failed:", error);
-                        showMessage("Riproduzione automatica fallita. Premi il pulsante per avviare.");
-                        mainButton.textContent = 'Avvia Riproduzione';
-                        mainButton.removeEventListener('click', toggleMute);
-                        mainButton.addEventListener('click', manualPlay, {
-                            once: true
-                        });
-                    });
-                });
-
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    console.error('HLS.js error:', data);
-                    if (data.fatal) {
-                        showMessage(`Errore di streaming: ${data.details}. Riavvio in corso...`);
-                        setTimeout(() => loadVideo(), 1000);
-                    }
-                });
-            }
-
-            // Funzione per avviare la riproduzione manualmente
-            function manualPlay() {
-                video.play().then(() => {
-                    video.muted = false;
-                    updateMainButton();
-                    mainButton.removeEventListener('click', manualPlay);
-                    mainButton.addEventListener('click', toggleMute);
-                }).catch(error => {
-                    console.error("Manual play failed:", error);
-                    showMessage("Riproduzione fallita. Il browser ha bloccato l'azione.");
-                });
-            }
-
-            // Funzione per attivare/disattivare l'audio
-            function toggleMute() {
-                video.muted = !video.muted;
-                updateMainButton();
-            }
-
-            if (Hls.isSupported()) {
-                loadVideo();
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Fallback per il supporto nativo in Safari
-                video.src = videoUrl;
-                video.play().catch(error => {
-                    console.error("Autoplay failed on native player:", error);
-                    showMessage("Riproduzione automatica fallita. Premi il pulsante per avviare.");
-                    mainButton.textContent = 'Avvia Riproduzione';
-                    mainButton.removeEventListener('click', toggleMute);
-                    mainButton.addEventListener('click', manualPlay, {
-                        once: true
-                    });
-                });
-            } else {
-                showMessage('Il tuo browser non supporta lo streaming HLS.');
-            }
-
-            // Event listener per il pulsante principale
-            mainButton.addEventListener('click', toggleMute);
-
-            // Event listener per il pulsante PiP
-            pipButton.addEventListener('click', () => {
-                if (document.pictureInPictureEnabled) {
-                    if (document.pictureInPictureElement) {
-                        document.exitPictureInPicture().catch(error => {
-                            console.error("Exit PiP failed:", error);
-                        });
-                    } else {
-                        if (video.paused) {
-                            video.play().catch(error => {
-                                console.error("Play failed before PiP request:", error);
-                                showMessage("Impossibile riprodurre il video. Riprova.");
-                                return;
-                            });
-                        }
-                        video.requestPictureInPicture().catch(error => {
-                            console.error("PiP failed:", error);
-                            showMessage("Impossibile entrare in modalità Schermo-in-Schermo. Riprova più tardi.");
-                        });
-                    }
+            mainButton.addEventListener('click', function() {
+                if (video.paused) {
+                    video.play();
                 } else {
-                    showMessage("Il PiP non è supportato dal tuo dispositivo.");
+                    video.pause();
                 }
             });
 
-            // Nuovo event listener per il pulsante 'Installa App' che ora mostra il pop-up
-            installButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                showInstallPopup();
-            });
+            // Mostra il popup di installazione solo su iOS Safari
+            function showInstallPopup() {
+                const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                const isSafari = navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome');
+                const isStandalone = (window.matchMedia('(display-mode: standalone)').matches);
+                if (isIos && isSafari && !isStandalone) {
+                    installPopup.classList.remove('opacity-0', 'scale-0');
+                    installPopup.classList.add('opacity-100', 'scale-100');
+                }
+            }
+
+            function hideInstallPopup() {
+                installPopup.classList.remove('opacity-100', 'scale-100');
+                installPopup.classList.add('opacity-0', 'scale-0');
+            }
+
+            // Mostra il popup dopo 3 secondi per dare tempo alla pagina di caricarsi
+            setTimeout(showInstallPopup, 3000);
 
             // Aggiungi un event listener per il doppio tocco
             let lastClickTime = 0;
             video.addEventListener('click', (e) => {
                 const clickTime = new Date().getTime();
                 if (clickTime - lastClickTime < 300) {
+                    // È un doppio tocco
                     if (document.fullscreenElement) {
                         document.exitFullscreen();
-                    } else if (video.webkitEnterFullscreen) {
+                    } else if (video.webkitEnterFullscreen) { // Fallback for iOS Safari
+                         // If the video is already in fullscreen on iOS, exit it
                          if (document.webkitFullscreenElement) {
                             document.webkitExitFullscreen();
                         } else {
@@ -462,14 +203,8 @@
             video.addEventListener('play', updateMainButton);
             video.addEventListener('pause', updateMainButton);
 
-            // Nascondi il pulsante di installazione se l'app è già installata
-            window.addEventListener('appinstalled', () => {
-                installButton.style.display = 'none';
-            });
-
             // Stato iniziale
             updateMainButton();
-            checkPWAInstallability();
         });
     </script>
 </body>
