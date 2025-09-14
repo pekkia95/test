@@ -383,7 +383,7 @@
                         }
                         video.requestPictureInPicture().catch(error => {
                             console.error("PiP failed:", error);
-                            showMessage("Impossibile entrare in modalità Schermo-in-Schermo. Riprova più tardi.");
+                            showMessage("Impossibile entrare in modalità PiP. Riprova più tardi.");
                         });
                     }
                 } else {
@@ -394,7 +394,7 @@
             // Nuovo event listener per il pulsante 'Installa App'
             installButton.addEventListener('click', (e) => {
                 e.preventDefault();
-                showMessage("Per installare l'app: tocca l'icona di condivisione e seleziona 'Aggiungi a schermata Home'.");
+                showMessage("Per installare l'app: tocca l'icona di condivisione e seleziona 'Aggiungi a schermata Home'.", 8000);.");
             });
             
             // Aggiungi un event listener per il doppio tocco
