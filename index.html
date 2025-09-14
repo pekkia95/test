@@ -233,11 +233,9 @@
             const splashScreen = document.getElementById('splash');
             const appContainer = document.getElementById('app-container');
 
-            // URL del flusso video
             const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
             let hls;
 
-            // Registra il service worker per il supporto PWA
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
                     navigator.serviceWorker.register('/service-worker.js').then(registration => {
@@ -248,7 +246,6 @@
                 });
             }
 
-            // Funzione per mostrare il contenuto dell'app dopo lo splash screen
             function showApp() {
                 splashScreen.classList.add('hidden');
                 appContainer.classList.add('visible');
@@ -256,7 +253,6 @@
 
             setTimeout(showApp, 2000);
 
-            // Funzione per mostrare un messaggio temporaneo
             function showMessage(msg, duration = 3000) {
                 messageDisplay.textContent = msg;
                 setTimeout(() => {
@@ -264,7 +260,6 @@
                 }, duration);
             }
 
-            // Funzione per aggiornare il testo del pulsante principale
             function updateMainButton() {
                 if (video.paused) {
                     mainButton.textContent = 'Avvia Riproduzione';
@@ -275,20 +270,16 @@
                 }
             }
             
-            // Funzione per caricare il video usando hls.js
-            function loadVideoWithHls() {
-                if (hls) {
-                    hls.destroy();
-                }
+            function loadVideo() {
+                // Forziamo sempre l'uso di hls.js per una maggiore compatibilità
                 if (Hls.isSupported()) {
+                    if (hls) {
+                        hls.destroy();
+                    }
                     hls = new Hls({
-                        // Aggiunge un timeout per il caricamento del manifesto
                         manifestLoadingTimeOut: 10000,
-                        // Aggiorna la lista di stream ogni 3 secondi per le live
                         liveSyncDuration: 3,
-                        // Assicura che la riproduzione riprenda da dove si era interrotta
                         liveMaxLatencyDuration: 10,
-                        // Cerca una porzione di stream valida
                         liveDuration: 30
                     });
 
@@ -301,35 +292,44 @@
                             switch(data.type) {
                                 case Hls.ErrorTypes.NETWORK_ERROR:
                                     showMessage(`Errore di rete: ${data.details}. Riprovo...`);
-                                    setTimeout(() => loadVideoWithHls(), 2000);
+                                    setTimeout(() => loadVideo(), 2000);
                                     break;
                                 case Hls.ErrorTypes.MEDIA_ERROR:
                                     showMessage(`Errore media: ${data.details}. Riavvio del player...`);
-                                    setTimeout(() => loadVideoWithHls(), 2000);
+                                    setTimeout(() => loadVideo(), 2000);
                                     break;
                                 default:
-                                    // Non riesco a recuperare, distruggo e ricarico
                                     hls.destroy();
                                     showMessage('Errore critico. Riavvio in corso...');
-                                    setTimeout(() => loadVideoWithHls(), 2000);
+                                    setTimeout(() => loadVideo(), 2000);
                                     break;
                             }
                         }
                     });
-                    console.log('Caricamento video forzato con hls.js.');
+                    console.log('Caricamento video con hls.js.');
                 } else {
                     showMessage('Il tuo browser non supporta lo streaming HLS.');
-                    console.error('Hls.js non supportato in questo browser.');
                 }
             }
 
-            // Inizializza il player forzando l'uso di hls.js
-            loadVideoWithHls();
+            loadVideo();
 
-            // Event listener per il pulsante principale
+            // Aggiungo un listener al tocco sul video per forzare la riproduzione
+            video.addEventListener('touchstart', () => {
+                // Imposto il video su muto e cerco di riprodurlo
+                video.muted = true;
+                video.play().then(() => {
+                    // Se la riproduzione va a buon fine, riattivo l'audio
+                    video.muted = false;
+                    updateMainButton();
+                }).catch(error => {
+                    console.error("Riproduzione fallita al tocco:", error);
+                    showMessage("Riproduzione fallita. Il browser potrebbe aver bloccato l'azione.");
+                });
+            }, { once: true }); // Eseguo il listener solo una volta
+
             mainButton.addEventListener('click', () => {
                 if (video.paused) {
-                    // Se il video è in pausa, avvialo e togli il muto
                     video.play().then(() => {
                         video.muted = false;
                         updateMainButton();
@@ -338,13 +338,11 @@
                         showMessage("Riproduzione fallita. Il browser potrebbe aver bloccato l'azione.");
                     });
                 } else {
-                    // Se il video è in riproduzione, attiva/disattiva l'audio
                     video.muted = !video.muted;
                     updateMainButton();
                 }
             });
 
-            // Event listener per il pulsante PiP
             pipButton.addEventListener('click', () => {
                 if (document.pictureInPictureEnabled) {
                     if (document.pictureInPictureElement) {
@@ -369,7 +367,6 @@
                 }
             });
 
-            // Aggiungi un event listener per il doppio tocco
             let lastClickTime = 0;
             video.addEventListener('click', (e) => {
                 const clickTime = new Date().getTime();
@@ -389,12 +386,9 @@
                 lastClickTime = clickTime;
             });
 
-            // Sincronizza lo stato del pulsante se l'utente usa i controlli nativi del player
             video.addEventListener('play', updateMainButton);
             video.addEventListener('pause', updateMainButton);
             video.addEventListener('volumechange', updateMainButton);
-
-            // Stato iniziale
             updateMainButton();
         });
     </script>
