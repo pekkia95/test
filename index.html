@@ -8,6 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2k5u16r+P0hN45d5aT5S4yL2z8j5XkY5rQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
@@ -225,6 +228,17 @@
             // URL del flusso video
             const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
             let hls;
+
+            // Registra il service worker per il supporto PWA
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/service-worker.js').then(registration => {
+                        console.log('Service Worker registrato con successo:', registration.scope);
+                    }).catch(error => {
+                        console.log('Registrazione del Service Worker fallita:', error);
+                    });
+                });
+            }
             
             // Funzione per mostrare il contenuto dell'app dopo lo splash screen
             function showApp() {
