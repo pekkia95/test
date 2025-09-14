@@ -6,10 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageDisplay = document.getElementById('message-display');
     const splashScreen = document.getElementById('splash');
     const appContainer = document.getElementById('app-container');
+
+    // URL del flusso video
     const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
     let hls;
     let deferredPrompt;
+
+    // Variabile per il contenitore delle istruzioni di installazione iOS
     const installPromptContainer = document.getElementById('install-prompt-container');
+
+    // Registra il service worker per il supporto PWA
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/service-worker.js').then(registration => {
@@ -19,29 +25,39 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+    // Aggiungi un controllo per la piattaforma iOS
     function isiOS() {
         const userAgent = window.navigator.userAgent.toLowerCase();
         return /iphone|ipad|ipod/.test(userAgent);
     }
-    if (isiOS()) {
-        if (installPromptContainer && !window.matchMedia('(display-mode: standalone)').matches) {
-            installPromptContainer.innerHTML = `
-                <p>Per installare l'app, tocca l'icona "Condividi" poi "Aggiungi a schermata Home".</p>
-            `;
-            installPromptContainer.style.display = 'block';
-        }
-        installButton.style.display = 'none';
+
+    // Mostra il pulsante "Installa App" solo se non siamo in modalità standalone
+    if (!window.matchMedia('(display-mode: standalone)').matches) {
+        installButton.style.display = 'block';
     } else {
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            if (!window.matchMedia('(display-mode: standalone)').matches) {
-                installButton.style.display = 'block';
+        installButton.style.display = 'none';
+    }
+
+    // Event listener per l'installazione PWA (solo per browser che lo supportano, es. Android)
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+    });
+
+    // Gestisce il click sul pulsante di installazione
+    installButton.addEventListener('click', () => {
+        // Se è un dispositivo iOS, mostra le istruzioni
+        if (isiOS()) {
+            if (installPromptContainer) {
+                installPromptContainer.innerHTML = `
+                    <p>Per installare l'app, tocca l'icona di **Condividi** nella barra del browser e seleziona **"Aggiungi a schermata Home"**.</p>
+                `;
+                installPromptContainer.style.display = 'block';
             }
-        });
-        installButton.addEventListener('click', () => {
+        } else {
+            // Se è un browser che supporta l'installazione nativa, mostra il prompt
             if (deferredPrompt) {
-                installButton.style.display = 'none';
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
@@ -52,19 +68,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     deferredPrompt = null;
                 });
             }
-        });
-    }
+        }
+    });
+
+    // Funzione per mostrare il contenuto dell'app dopo lo splash screen
     function showApp() {
         splashScreen.classList.add('hidden');
         appContainer.classList.add('visible');
     }
+
     setTimeout(showApp, 2000);
+
+    // Funzione per mostrare un messaggio temporaneo
     function showMessage(msg, duration = 3000) {
         messageDisplay.textContent = msg;
         setTimeout(() => {
             messageDisplay.textContent = '';
         }, duration);
     }
+
+    // Funzione per aggiornare il testo del pulsante principale
     function updateMainButton() {
         if (video.muted) {
             mainButton.textContent = 'Attiva Audio';
@@ -72,6 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
             mainButton.textContent = 'Disattiva Audio';
         }
     }
+
+    // Funzione per caricare il video con hls.js
     function loadVideo() {
         if (hls) {
             hls.destroy();
@@ -79,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hls = new Hls();
         hls.loadSource(videoUrl);
         hls.attachMedia(video);
+
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
             video.play().then(() => {
                 updateMainButton();
@@ -92,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         });
+
         hls.on(Hls.Events.ERROR, (event, data) => {
             console.error('HLS.js error:', data);
             if (data.fatal) {
@@ -100,6 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Funzione per avviare la riproduzione manualmente
     function manualPlay() {
         video.play().then(() => {
             video.muted = false;
@@ -111,13 +140,18 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage("Riproduzione fallita. Il browser ha bloccato l'azione.");
         });
     }
+
+    // Funzione per attivare/disattivare l'audio
     function toggleMute() {
         video.muted = !video.muted;
         updateMainButton();
     }
+
+    // Avvia il caricamento del video
     if (Hls.isSupported()) {
         loadVideo();
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Fallback per il supporto nativo in Safari
         video.src = videoUrl;
         video.play().catch(error => {
             console.error("Autoplay failed on native player:", error);
@@ -131,12 +165,20 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         showMessage('Il tuo browser non supporta lo streaming HLS.');
     }
+
+    // Controlla la modalità di visualizzazione e mostra i pulsanti appropriati
     if (!window.matchMedia('(display-mode: standalone)').matches) {
+        // Non in modalità standalone (web browser)
         pipButton.style.display = 'block';
     } else {
+        // Modalità standalone (PWA installata)
         pipButton.style.display = 'none';
     }
+
+    // Event listener per il pulsante principale
     mainButton.addEventListener('click', toggleMute);
+
+    // Event listener per il pulsante PiP
     pipButton.addEventListener('click', () => {
         if (document.pictureInPictureEnabled) {
             if (document.pictureInPictureElement) {
@@ -160,10 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage("Il PiP non è supportato dal tuo dispositivo.");
         }
     });
+
+    // Aggiungi un event listener per il doppio tocco
     let lastClickTime = 0;
     video.addEventListener('click', (e) => {
         const clickTime = new Date().getTime();
         if (clickTime - lastClickTime < 300) {
+            // È un doppio tocco
             if (document.fullscreenElement) {
                 document.exitFullscreen();
             } else if (video.webkitEnterFullscreen) {
@@ -178,8 +223,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         lastClickTime = clickTime;
     });
+
+    // Sincronizza lo stato del pulsante se l'utente usa i controlli nativi del player
     video.addEventListener('volumechange', updateMainButton);
     video.addEventListener('play', updateMainButton);
     video.addEventListener('pause', updateMainButton);
+
+    // Stato iniziale
     updateMainButton();
 });
