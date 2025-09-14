@@ -13,12 +13,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ExtraTvLive">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon-180x180.png">
-    <link rel="apple-touch-startup-image" href="icons/apple-splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-    <link rel="apple-touch-startup-image" href="icons/apple-splash-1668x2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-    <link rel="apple-touch-startup-image" href="icons/apple-splash-1536x2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-    <link rel="apple-touch-startup-image" href="icons/apple-splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-    <link rel="apple-touch-startup-image" href="icons/apple-splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-    <link rel="apple-touch-startup-image" href="icons/apple-splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
@@ -34,7 +28,6 @@
             overflow-x: hidden;
         }
 
-        /* Stile per la splash screen */
         .splash-screen {
             position: fixed;
             top: 0;
@@ -68,10 +61,8 @@
             gap: 1.5rem;
             text-align: center;
             opacity: 0;
-            /* Nasconde il contenuto finché lo splash screen è attivo */
             transition: opacity 1s ease-in-out;
             box-sizing: border-box;
-            /* Assicura che il padding non causi overflow */
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
             border-radius: 1rem;
         }
@@ -84,7 +75,6 @@
             position: relative;
             width: 100%;
             padding-top: 56.25%;
-            /* 16:9 Aspect Ratio */
             border-radius: 1rem;
             overflow: hidden;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -119,7 +109,6 @@
             box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
             cursor: pointer;
             min-width: 150px;
-            /* Assicura che i pulsanti siano abbastanza larghi per il touch */
             text-align: center;
             text-decoration: none;
         }
@@ -142,7 +131,6 @@
             background-color: #d1d5db;
         }
 
-        /* Tema scuro per tutti gli elementi */
         @media (prefers-color-scheme: dark) {
             body {
                 background-color: #1e1e1e;
@@ -232,13 +220,12 @@
             const messageDisplay = document.getElementById('message-display');
             const splashScreen = document.getElementById('splash');
             const appContainer = document.getElementById('app-container');
-
             const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
             let hls;
 
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/service-worker.js').then(registration => {
+                    navigator.serviceWorker.register('service-worker.js').then(registration => {
                         console.log('Service Worker registrato con successo:', registration.scope);
                     }).catch(error => {
                         console.log('Registrazione del Service Worker fallita:', error);
@@ -250,7 +237,6 @@
                 splashScreen.classList.add('hidden');
                 appContainer.classList.add('visible');
             }
-
             setTimeout(showApp, 2000);
 
             function showMessage(msg, duration = 3000) {
@@ -271,11 +257,8 @@
             }
             
             function loadVideo() {
-                // Forziamo sempre l'uso di hls.js per una maggiore compatibilità
                 if (Hls.isSupported()) {
-                    if (hls) {
-                        hls.destroy();
-                    }
+                    if (hls) { hls.destroy(); }
                     hls = new Hls({
                         manifestLoadingTimeOut: 10000,
                         liveSyncDuration: 3,
@@ -306,27 +289,23 @@
                             }
                         }
                     });
-                    console.log('Caricamento video con hls.js.');
                 } else {
-                    showMessage('Il tuo browser non supporta lo streaming HLS.');
+                    video.src = videoUrl;
                 }
             }
 
             loadVideo();
 
-            // Aggiungo un listener al tocco sul video per forzare la riproduzione
             video.addEventListener('touchstart', () => {
-                // Imposto il video su muto e cerco di riprodurlo
                 video.muted = true;
                 video.play().then(() => {
-                    // Se la riproduzione va a buon fine, riattivo l'audio
                     video.muted = false;
                     updateMainButton();
                 }).catch(error => {
                     console.error("Riproduzione fallita al tocco:", error);
                     showMessage("Riproduzione fallita. Il browser potrebbe aver bloccato l'azione.");
                 });
-            }, { once: true }); // Eseguo il listener solo una volta
+            }, { once: true });
 
             mainButton.addEventListener('click', () => {
                 if (video.paused) {
