@@ -225,14 +225,21 @@
     </div>
 
     <script>
+        // Logica per mostrare il contenuto dell'app dopo lo splash screen
+        const splashScreen = document.getElementById('splash');
+        const appContainer = document.getElementById('app-container');
+        function showApp() {
+            splashScreen.classList.add('hidden');
+            appContainer.classList.add('visible');
+        }
+        setTimeout(showApp, 2000);
+
         document.addEventListener('DOMContentLoaded', () => {
             const video = document.getElementById('video');
             const mainButton = document.getElementById('main-button');
             const pipButton = document.getElementById('pip-button');
-            const installButton = document.getElementById('install-button'); // Aggiunto il riferimento al nuovo pulsante
+            const installButton = document.getElementById('install-button');
             const messageDisplay = document.getElementById('message-display');
-            const splashScreen = document.getElementById('splash');
-            const appContainer = document.getElementById('app-container');
 
             // Logica per nascondere il pulsante PiP su iOS in modalità standalone
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
