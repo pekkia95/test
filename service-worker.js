@@ -1,13 +1,13 @@
-// Versiona per invalidare la cache quando pubblichi
-const CACHE_NAME = 'extratvlive-ui-v2';
+const CACHE_NAME = 'extratvlive-ui-ghp-v1';
 const UI_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/ios-install-hint.js',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/apple-touch-icon-180x180.png'
+  './',
+  './index.html',
+  './404.html',
+  './manifest.json',
+  './ios-install-hint.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon-180x180.png'
 ];
 
 self.addEventListener('install', (event) => {
