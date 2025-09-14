@@ -274,30 +274,57 @@
                     mainButton.textContent = 'Disattiva Audio';
                 }
             }
+            
+            // Funzione per caricare il video usando hls.js
+            function loadVideoWithHls() {
+                if (hls) {
+                    hls.destroy();
+                }
+                if (Hls.isSupported()) {
+                    hls = new Hls({
+                        // Aggiunge un timeout per il caricamento del manifesto
+                        manifestLoadingTimeOut: 10000,
+                        // Aggiorna la lista di stream ogni 3 secondi per le live
+                        liveSyncDuration: 3,
+                        // Assicura che la riproduzione riprenda da dove si era interrotta
+                        liveMaxLatencyDuration: 10,
+                        // Cerca una porzione di stream valida
+                        liveDuration: 30
+                    });
 
-            // Funzione per caricare il video
-            function loadVideo() {
-                // Prima, prova a usare il player nativo di Safari su iOS
-                // Questo è il metodo più affidabile e performante.
-                if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = videoUrl;
-                    console.log('Caricamento video con player nativo di Safari.');
-                } else if (Hls.isSupported()) {
-                    // Se il player nativo non è supportato, usa hls.js come fallback
-                    if (hls) {
-                        hls.destroy();
-                    }
-                    hls = new Hls();
                     hls.loadSource(videoUrl);
                     hls.attachMedia(video);
-                    console.log('Caricamento video con hls.js.');
+
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        console.error('HLS.js error:', data);
+                        if (data.fatal) {
+                            switch(data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    showMessage(`Errore di rete: ${data.details}. Riprovo...`);
+                                    setTimeout(() => loadVideoWithHls(), 2000);
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    showMessage(`Errore media: ${data.details}. Riavvio del player...`);
+                                    setTimeout(() => loadVideoWithHls(), 2000);
+                                    break;
+                                default:
+                                    // Non riesco a recuperare, distruggo e ricarico
+                                    hls.destroy();
+                                    showMessage('Errore critico. Riavvio in corso...');
+                                    setTimeout(() => loadVideoWithHls(), 2000);
+                                    break;
+                            }
+                        }
+                    });
+                    console.log('Caricamento video forzato con hls.js.');
                 } else {
                     showMessage('Il tuo browser non supporta lo streaming HLS.');
+                    console.error('Hls.js non supportato in questo browser.');
                 }
             }
-            
-            // Inizializza il player al caricamento della pagina
-            loadVideo();
+
+            // Inizializza il player forzando l'uso di hls.js
+            loadVideoWithHls();
 
             // Event listener per il pulsante principale
             mainButton.addEventListener('click', () => {
