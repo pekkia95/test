@@ -334,7 +334,7 @@
                 installPopup.classList.add('show');
                 setTimeout(() => {
                     installPopup.classList.remove('show');
-                }, 10000); // Nasconde il pop-up dopo 10 secondi
+                }, 15000); // Nasconde il pop-up dopo 15 secondi
             }
 
             // Funzione per nascondere il pop-up
@@ -448,7 +448,7 @@
                 }
             });
 
-            // Nuovo event listener per il pulsante 'Installa App' che ora mostra il pop-up
+            // Nuovo event listener per il pulsante 'Installa iOS App' che ora mostra il pop-up
             installButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 showInstallPopup();
