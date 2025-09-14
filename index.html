@@ -26,7 +26,6 @@
             overflow-x: hidden;
         }
 
-        /* Stile per la splash screen */
         .splash-screen {
             position: fixed;
             top: 0;
@@ -60,10 +59,8 @@
             gap: 1.5rem;
             text-align: center;
             opacity: 0;
-            /* Nasconde il contenuto finché lo splash screen è attivo */
             transition: opacity 1s ease-in-out;
             box-sizing: border-box;
-            /* Assicura che il padding non causi overflow */
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
             border-radius: 1rem;
         }
@@ -76,7 +73,6 @@
             position: relative;
             width: 100%;
             padding-top: 56.25%;
-            /* 16:9 Aspect Ratio */
             border-radius: 1rem;
             overflow: hidden;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -100,6 +96,22 @@
             gap: 1rem;
             flex-wrap: wrap;
         }
+        
+        #install-prompt-container p {
+            background-color: #e5e7eb;
+            color: #4b5563;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            #install-prompt-container p {
+                background-color: #374151;
+                color: #d1d5db;
+            }
+        }
 
         .app-button {
             padding: 0.75rem 1.5rem;
@@ -111,7 +123,6 @@
             box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
             cursor: pointer;
             min-width: 150px;
-            /* Assicura che i pulsanti siano abbastanza larghi per il touch */
             text-align: center;
             text-decoration: none;
         }
@@ -134,7 +145,6 @@
             background-color: #d1d5db;
         }
 
-        /* Tema scuro per tutti gli elementi */
         @media (prefers-color-scheme: dark) {
             body {
                 background-color: #1e1e1e;
@@ -199,6 +209,7 @@
             <button id="pip-button" class="app-button secondary" style="display: none;">
                 Entra in PiP
             </button>
+            <div id="install-prompt-container" style="display: none;"></div>
             <button id="install-button" class="app-button secondary" style="display: none;">
                 Installa App
             </button>
@@ -210,15 +221,15 @@
         <p id="message-display" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></p>
 
         <div class="footer">
-              <div class="footer">
             <div class="footer-icons mt-2">
                 <a href="https://www.facebook.com/extratvitaly" target="_blank"><i class="fa-brands fa-facebook-square"></i></a>
                 <a href="https://www.instagram.com/extratv_official/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
-                <a href="https://www.youtube.com/@ExtraTvItaly" target="_blank"><i class="fa-brands fa-youtube-square"></i></a>
+                <a href="https://www.youtube.com/c/ExtraTvLive" target="_blank"><i class="fa-brands fa-youtube-square"></i></a>
             </div>
-            <p class="text-xs mt-2">© 2025 ExtraTv Live. Tutti i diritti riservati.</p>
+            <p class="text-xs mt-2">© 2024 ExtraTv Live. Tutti i diritti riservati.</p>
+        </div>
     </div>
-
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const video = document.getElementById('video');
@@ -228,13 +239,13 @@
             const messageDisplay = document.getElementById('message-display');
             const splashScreen = document.getElementById('splash');
             const appContainer = document.getElementById('app-container');
-
-            // URL del flusso video
+        
             const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
             let hls;
             let deferredPrompt;
-
-            // Registra il service worker per il supporto PWA
+        
+            const installPromptContainer = document.getElementById('install-prompt-container');
+        
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
                     navigator.serviceWorker.register('/service-worker.js').then(registration => {
@@ -244,50 +255,60 @@
                     });
                 });
             }
-
-            // Gestisce la logica di installazione della PWA
+        
+            function isiOS() {
+                const userAgent = window.navigator.userAgent.toLowerCase();
+                return /iphone|ipad|ipod/.test(userAgent);
+            }
+        
+            if (!window.matchMedia('(display-mode: standalone)').matches) {
+                installButton.style.display = 'block';
+            } else {
+                installButton.style.display = 'none';
+            }
+        
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                // Mostra il pulsante di installazione solo se non siamo in modalità standalone
-                if (!window.matchMedia('(display-mode: standalone)').matches) {
-                    installButton.style.display = 'block';
-                }
             });
-
-            // Gestisce il click sul pulsante di installazione
+        
             installButton.addEventListener('click', () => {
-                if (deferredPrompt) {
-                    installButton.style.display = 'none';
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        if (choiceResult.outcome === 'accepted') {
-                            console.log('L\'utente ha accettato di installare la PWA');
-                        } else {
-                            console.log('L\'utente ha rifiutato l\'installazione della PWA');
-                        }
-                        deferredPrompt = null;
-                    });
+                if (isiOS()) {
+                    if (installPromptContainer) {
+                        installPromptContainer.innerHTML = `
+                            <p>Per installare, tocca <i class="fa-solid fa-arrow-up-from-bracket"></i> poi <i class="fa-solid fa-square-plus"></i></p>
+                        `;
+                        installPromptContainer.style.display = 'block';
+                    }
+                } else {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then((choiceResult) => {
+                            if (choiceResult.outcome === 'accepted') {
+                                console.log('L\'utente ha accettato di installare la PWA');
+                            } else {
+                                console.log('L\'utente ha rifiutato l\'installazione della PWA');
+                            }
+                            deferredPrompt = null;
+                        });
+                    }
                 }
             });
-
-            // Funzione per mostrare il contenuto dell'app dopo lo splash screen
+        
             function showApp() {
                 splashScreen.classList.add('hidden');
                 appContainer.classList.add('visible');
             }
-
+        
             setTimeout(showApp, 2000);
-
-            // Funzione per mostrare un messaggio temporaneo
+        
             function showMessage(msg, duration = 3000) {
                 messageDisplay.textContent = msg;
                 setTimeout(() => {
                     messageDisplay.textContent = '';
                 }, duration);
             }
-
-            // Funzione per aggiornare il testo del pulsante principale
+        
             function updateMainButton() {
                 if (video.muted) {
                     mainButton.textContent = 'Attiva Audio';
@@ -295,8 +316,7 @@
                     mainButton.textContent = 'Disattiva Audio';
                 }
             }
-
-            // Funzione per caricare il video con hls.js
+        
             function loadVideo() {
                 if (hls) {
                     hls.destroy();
@@ -304,7 +324,7 @@
                 hls = new Hls();
                 hls.loadSource(videoUrl);
                 hls.attachMedia(video);
-
+        
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     video.play().then(() => {
                         updateMainButton();
@@ -318,7 +338,7 @@
                         });
                     });
                 });
-
+        
                 hls.on(Hls.Events.ERROR, (event, data) => {
                     console.error('HLS.js error:', data);
                     if (data.fatal) {
@@ -327,8 +347,7 @@
                     }
                 });
             }
-
-            // Funzione per avviare la riproduzione manualmente
+        
             function manualPlay() {
                 video.play().then(() => {
                     video.muted = false;
@@ -341,17 +360,14 @@
                 });
             }
 
-            // Funzione per attivare/disattivare l'audio
             function toggleMute() {
                 video.muted = !video.muted;
                 updateMainButton();
             }
-
-            // Avvia il caricamento del video
+        
             if (Hls.isSupported()) {
                 loadVideo();
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Fallback per il supporto nativo in Safari
                 video.src = videoUrl;
                 video.play().catch(error => {
                     console.error("Autoplay failed on native player:", error);
@@ -365,20 +381,15 @@
             } else {
                 showMessage('Il tuo browser non supporta lo streaming HLS.');
             }
-
-            // Controlla la modalità di visualizzazione e mostra i pulsanti appropriati
+        
             if (!window.matchMedia('(display-mode: standalone)').matches) {
-                // Non in modalità standalone (web browser)
                 pipButton.style.display = 'block';
             } else {
-                // Modalità standalone (PWA installata)
                 pipButton.style.display = 'none';
             }
-
-            // Event listener per il pulsante principale
+        
             mainButton.addEventListener('click', toggleMute);
-
-            // Event listener per il pulsante PiP
+        
             pipButton.addEventListener('click', () => {
                 if (document.pictureInPictureEnabled) {
                     if (document.pictureInPictureElement) {
@@ -402,17 +413,15 @@
                     showMessage("Il PiP non è supportato dal tuo dispositivo.");
                 }
             });
-
-            // Aggiungi un event listener per il doppio tocco
+        
             let lastClickTime = 0;
             video.addEventListener('click', (e) => {
                 const clickTime = new Date().getTime();
                 if (clickTime - lastClickTime < 300) {
-                    // È un doppio tocco
                     if (document.fullscreenElement) {
                         document.exitFullscreen();
                     } else if (video.webkitEnterFullscreen) {
-                        if (document.webkitFullscreenElement) {
+                         if (document.webkitFullscreenElement) {
                             document.webkitExitFullscreen();
                         } else {
                             video.webkitEnterFullscreen();
@@ -423,16 +432,13 @@
                 }
                 lastClickTime = clickTime;
             });
-
-            // Sincronizza lo stato del pulsante se l'utente usa i controlli nativi del player
+        
             video.addEventListener('volumechange', updateMainButton);
             video.addEventListener('play', updateMainButton);
             video.addEventListener('pause', updateMainButton);
-
-            // Stato iniziale
+        
             updateMainButton();
         });
     </script>
 </body>
-
 </html>
