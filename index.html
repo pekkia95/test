@@ -12,13 +12,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-  <!-- IMPORTANT: relative paths for GitHub Pages project sites -->
   <link rel="manifest" href="manifest.json" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="ExtraTvLive" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon-180x180.png" />
   <meta name="theme-color" content="#f97316" />
+
   <style>
     :root { --brand:#f97316; }
     body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
@@ -44,18 +44,19 @@
     <p class="text-xl font-semibold text-gray-600 dark:text-gray-300">Streaming dal vivo, sempre con te.</p>
 
     <div class="video-container mt-4">
-      <video id="video" class="video-player" playsinline muted autoplay controls
-             src="https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8">
+      <!-- NIENTE autoplay; mutato di default; niente crossorigin per iOS nativo -->
+      <video id="video" class="video-player" playsinline muted controls preload="metadata"
+             src="">
         Il tuo browser non supporta il tag video.
       </video>
     </div>
 
-    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Doppio tap sul video per entrare/uscire dal <strong>full‑screen</strong>.</p>
+    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">Tocca <strong>Avvia Riproduzione</strong> (o il video) per iniziare. Doppio tap per Full‑Screen.</p>
 
     <div class="flex flex-wrap gap-3 justify-center mt-3">
-      <button id="main-button" class="px-5 py-3 rounded-full font-semibold shadow bg-[color:var(--brand)] text-white hover:opacity-90 min-w-[160px]">Avvia Riproduzione</button>
+      <button id="main-button" class="px-5 py-3 rounded-full font-semibold shadow bg-[color:var(--brand)] text-white hover:opacity-90 min-w-[180px]">Avvia Riproduzione</button>
+      <button id="audio-button" class="px-5 py-3 rounded-full font-semibold shadow bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 min-w-[160px]">Attiva Audio</button>
       <button id="pip-button" class="px-5 py-3 rounded-full font-semibold shadow bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 min-w-[160px]">Entra in PiP</button>
-      <a href="https://www.extratvlive.it/ondemand/" target="_blank" rel="noopener" class="px-5 py-3 rounded-full font-semibold shadow bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 min-w-[160px]">ExtraTvLive+</a>
     </div>
 
     <p id="msg" class="text-sm text-gray-500 dark:text-gray-400 mt-1"></p>
@@ -77,68 +78,65 @@
       const splash = document.getElementById('splash');
       const video = document.getElementById('video');
       const mainBtn = document.getElementById('main-button');
+      const audioBtn = document.getElementById('audio-button');
       const pipBtn = document.getElementById('pip-button');
       const msg = document.getElementById('msg');
-      let hls;
+      let hls, started = false;
 
-      // Service Worker: relative path (GitHub Pages project path safe)
       if ('serviceWorker' in navigator){
         window.addEventListener('load', ()=>{
           navigator.serviceWorker.register('./service-worker.js').catch(console.warn);
         });
       }
-
       window.addEventListener('load', ()=> setTimeout(()=> splash.classList.add('hidden'), 600));
 
       function showMessage(text, t=3000){ msg.textContent = text; setTimeout(()=> msg.textContent='', t); }
-      function updateMain(){
-        if(video.paused) mainBtn.textContent = 'Avvia Riproduzione';
-        else if (video.muted) mainBtn.textContent = 'Attiva Audio';
-        else mainBtn.textContent = 'Disattiva Audio';
-      }
 
       const isIOS = /iP(hone|ad|od)/.test(navigator.platform) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
 
-      async function loadVideo(){
+      async function startOnce(){
+        if (started) return;
+        started = true;
         try { if (hls) { hls.destroy(); hls = null; } } catch(e){}
         if (isIOS || !window.Hls || !Hls.isSupported()){
+          // iOS nativo: niente crossorigin, partire MUTED
           video.removeAttribute('crossorigin');
           video.src = videoUrl;
           video.load();
-          try { await video.play(); } catch(e) { showMessage('Tocca "Avvia Riproduzione" per iniziare.'); }
+          try { await video.play(); } catch(e) { showMessage('Premi di nuovo Avvia se non parte.'); }
         } else {
+          // hls.js per altri browser
           try { video.setAttribute('crossorigin', 'anonymous'); } catch(e){}
           hls = new Hls({ manifestLoadingTimeOut: 10000, liveSyncDuration: 3, liveMaxLatencyDuration: 10, liveDuration: 30 });
           hls.loadSource(videoUrl);
           hls.attachMedia(video);
           hls.on(Hls.Events.MEDIA_ATTACHED, () => video.play().catch(()=>{}));
-          hls.on(Hls.Events.ERROR, (event, data) => {
-            if (data.fatal) {
-              switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR: showMessage(`Errore di rete: ${data.details}. Riprovo...`); setTimeout(loadVideo, 1500); break;
-                case Hls.ErrorTypes.MEDIA_ERROR: showMessage(`Errore media: ${data.details}. Riavvio...`); setTimeout(loadVideo, 1500); break;
-                default: try { hls.destroy(); } catch(e){} showMessage('Errore critico. Riavvio...'); setTimeout(loadVideo, 1500);
-              }
-            }
-          });
         }
       }
 
-      video.addEventListener('canplay', async () => { if (video.paused) { try { await video.play(); } catch(e){} } });
-      mainBtn.addEventListener('click', async () => {
-        if (video.paused) { try { await video.play(); video.muted = false; } catch(e) { showMessage('Il browser ha bloccato la riproduzione.'); } }
-        else { video.muted = !video.muted; }
-        updateMain();
-      });
+      function toggleAudio(){
+        // NON smutare automaticamente alla partenza per evitare blocchi su iOS/PWA
+        video.muted = !video.muted;
+        audioBtn.textContent = video.muted ? 'Attiva Audio' : 'Disattiva Audio';
+      }
 
+      mainBtn.addEventListener('click', startOnce);
+      // Avvio anche toccando il video (tap singolo)
+      video.addEventListener('touchend', startOnce, { once: true, passive: true });
+      video.addEventListener('click', startOnce, { once: true });
+
+      audioBtn.addEventListener('click', toggleAudio);
+
+      // PiP
       pipBtn.addEventListener('click', async () => {
         if (!('pictureInPictureEnabled' in document)) return showMessage('Il PiP non è supportato.');
         try { if(document.pictureInPictureElement){ await document.exitPictureInPicture(); } else { if(video.paused) await video.play(); await video.requestPictureInPicture(); } }
         catch(e){ showMessage('Impossibile attivare PiP.'); }
       });
 
+      // Doppio tap = full screen
       let lastTap = 0;
-      video.addEventListener('click', ()=>{
+      video.addEventListener('click', (ev)=>{
         const now = Date.now();
         if(now - lastTap < 300){
           if(document.fullscreenElement){ document.exitFullscreen(); }
@@ -148,8 +146,9 @@
         lastTap = now;
       });
 
-      loadVideo();
-      updateMain();
+      // Alcuni iOS mostrano solo il primo frame finché non c'è play attivo; se va in pausa, riprova
+      video.addEventListener('pause', () => { /* opzionale: potresti voler evitare autoplay loop */ });
+      video.addEventListener('error', () => { console.warn('Video error code:', video.error && video.error.code); });
     })();
   </script>
 </body>
