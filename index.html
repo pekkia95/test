@@ -7,7 +7,7 @@
     <title>ExtraTvLive</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2k5u16r+P0hN45d5aT5S4yL2z8j5XkY5rQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2k5u16r+P0hN45d5aT5S4yL2z8j5XkY5rQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -196,8 +196,11 @@
             <button id="main-button" class="app-button primary">
                 Attiva Audio
             </button>
-            <button id="pip-button" class="app-button secondary">
+            <button id="pip-button" class="app-button secondary" style="display: none;">
                 Entra in PiP
+            </button>
+            <button id="install-button" class="app-button secondary" style="display: none;">
+                Installa App
             </button>
             <a href="https://www.extratvlive.it/ondemand/" target="_blank" class="app-button secondary">
                 ExtraTvLive+
@@ -212,7 +215,7 @@
                 <a href="https://www.instagram.com/extratv_official/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
                 <a href="https://www.youtube.com/@ExtraTvItaly" target="_blank"><i class="fa-brands fa-youtube-square"></i></a>
             </div>
-            <p class="text-xs mt-2">&copy; 2024 ExtraTv Live. Tutti i diritti riservati.</p>
+            <p class="text-xs mt-2">© 2024 ExtraTv Live. Tutti i diritti riservati.</p>
         </div>
     </div>
 
@@ -221,6 +224,7 @@
             const video = document.getElementById('video');
             const mainButton = document.getElementById('main-button');
             const pipButton = document.getElementById('pip-button');
+            const installButton = document.getElementById('install-button');
             const messageDisplay = document.getElementById('message-display');
             const splashScreen = document.getElementById('splash');
             const appContainer = document.getElementById('app-container');
@@ -228,6 +232,7 @@
             // URL del flusso video
             const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
             let hls;
+            let deferredPrompt;
 
             // Registra il service worker per il supporto PWA
             if ('serviceWorker' in navigator) {
@@ -239,7 +244,33 @@
                     });
                 });
             }
-            
+
+            // Gestisce la logica di installazione della PWA
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                // Mostra il pulsante di installazione solo se non siamo in modalità standalone
+                if (!window.matchMedia('(display-mode: standalone)').matches) {
+                    installButton.style.display = 'block';
+                }
+            });
+
+            // Gestisce il click sul pulsante di installazione
+            installButton.addEventListener('click', () => {
+                if (deferredPrompt) {
+                    installButton.style.display = 'none';
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('L\'utente ha accettato di installare la PWA');
+                        } else {
+                            console.log('L\'utente ha rifiutato l\'installazione della PWA');
+                        }
+                        deferredPrompt = null;
+                    });
+                }
+            });
+
             // Funzione per mostrare il contenuto dell'app dopo lo splash screen
             function showApp() {
                 splashScreen.classList.add('hidden');
@@ -273,7 +304,7 @@
                 hls = new Hls();
                 hls.loadSource(videoUrl);
                 hls.attachMedia(video);
-                
+
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     video.play().then(() => {
                         updateMainButton();
@@ -296,7 +327,7 @@
                     }
                 });
             }
-            
+
             // Funzione per avviare la riproduzione manualmente
             function manualPlay() {
                 video.play().then(() => {
@@ -316,6 +347,7 @@
                 updateMainButton();
             }
 
+            // Avvia il caricamento del video
             if (Hls.isSupported()) {
                 loadVideo();
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -334,19 +366,26 @@
                 showMessage('Il tuo browser non supporta lo streaming HLS.');
             }
 
+            // Controlla la modalità di visualizzazione e mostra i pulsanti appropriati
+            if (!window.matchMedia('(display-mode: standalone)').matches) {
+                // Non in modalità standalone (web browser)
+                pipButton.style.display = 'block';
+            } else {
+                // Modalità standalone (PWA installata)
+                pipButton.style.display = 'none';
+            }
+
             // Event listener per il pulsante principale
             mainButton.addEventListener('click', toggleMute);
 
             // Event listener per il pulsante PiP
             pipButton.addEventListener('click', () => {
-                // Assicurati che il video stia riproducendo prima di provare il PiP
                 if (document.pictureInPictureEnabled) {
                     if (document.pictureInPictureElement) {
                         document.exitPictureInPicture().catch(error => {
                             console.error("Exit PiP failed:", error);
                         });
                     } else {
-                        // Se il video è in pausa, prova a riprodurlo prima
                         if (video.paused) {
                             video.play().catch(error => {
                                 console.error("Play failed before PiP request:", error);
@@ -372,9 +411,8 @@
                     // È un doppio tocco
                     if (document.fullscreenElement) {
                         document.exitFullscreen();
-                    } else if (video.webkitEnterFullscreen) { // Fallback for iOS Safari
-                         // If the video is already in fullscreen on iOS, exit it
-                         if (document.webkitFullscreenElement) {
+                    } else if (video.webkitEnterFullscreen) {
+                        if (document.webkitFullscreenElement) {
                             document.webkitExitFullscreen();
                         } else {
                             video.webkitEnterFullscreen();
