@@ -247,7 +247,7 @@
                     });
                 });
             }
-            
+
             // Funzione per mostrare il contenuto dell'app dopo lo splash screen
             function showApp() {
                 splashScreen.classList.add('hidden');
@@ -275,33 +275,29 @@
                 }
             }
 
-            // Funzione per caricare il video con hls.js
+            // Funzione per caricare il video
             function loadVideo() {
-                if (hls) {
-                    hls.destroy();
-                }
-                hls = new Hls();
-                hls.loadSource(videoUrl);
-                hls.attachMedia(video);
-                
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    console.error('HLS.js error:', data);
-                    if (data.fatal) {
-                        showMessage(`Errore di streaming: ${data.details}. Riavvio in corso...`);
-                        setTimeout(() => loadVideo(), 1000);
+                // Prima, prova a usare il player nativo di Safari su iOS
+                // Questo è il metodo più affidabile e performante.
+                if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = videoUrl;
+                    console.log('Caricamento video con player nativo di Safari.');
+                } else if (Hls.isSupported()) {
+                    // Se il player nativo non è supportato, usa hls.js come fallback
+                    if (hls) {
+                        hls.destroy();
                     }
-                });
+                    hls = new Hls();
+                    hls.loadSource(videoUrl);
+                    hls.attachMedia(video);
+                    console.log('Caricamento video con hls.js.');
+                } else {
+                    showMessage('Il tuo browser non supporta lo streaming HLS.');
+                }
             }
-
-            // Inizializza il player
-            if (Hls.isSupported()) {
-                loadVideo();
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Fallback per il supporto nativo in Safari
-                video.src = videoUrl;
-            } else {
-                showMessage('Il tuo browser non supporta lo streaming HLS.');
-            }
+            
+            // Inizializza il player al caricamento della pagina
+            loadVideo();
 
             // Event listener per il pulsante principale
             mainButton.addEventListener('click', () => {
