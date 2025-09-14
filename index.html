@@ -172,7 +172,7 @@
         /* Stile per il pop-up di installazione */
         #install-popup {
             position: fixed; /* Posizionamento rispetto alla viewport */
-            top: 50%;
+            top: 60%; /* Spostato leggermente più in basso */
             left: 50%;
             transform: translate(-50%, -50%);
             width: 90%;
@@ -197,9 +197,9 @@
         }
 
         .share-icon-svg {
-            width: 3rem; /* Ridimensionato a 48px */
+            width: 3rem;
             height: 3rem;
-            color: #4b5563; /* Colore più neutro */
+            color: #4b5563;
         }
 
         #close-popup-button {
@@ -263,12 +263,14 @@
     <div id="install-popup">
         <button id="close-popup-button">×</button>
         <p class="text-center font-bold text-lg">Installa l'app ExtraTvLive</p>
-        <p class="text-center text-sm">1. Tocca l'icona di condivisione <br/> nella barra di navigazione di Safari.</p>
-        <div class="text-center my-2"> <svg class="share-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <p class="text-center text-sm">1. Tocca l'icona di condivisione <br/> nella barra di navigazione del Browser.</p>
+        <div class="text-center my-2">
+            <svg class="share-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M16 11.5L12.5 8V16H11.5V8L8 11.5L7.5 11L12 6.5L16.5 11L16 11.5ZM16.5 18H7.5V17H16.5V18ZM17.5 19H6.5V18H17.5V19Z" fill="currentColor"/>
             </svg>
         </div>
-        <p class="text-center text-sm mt-1">2. Poi tocca 'Aggiungi a schermata Home'.</p> </div>
+        <p class="text-center text-sm mt-1">2. Poi tocca 'Aggiungi a schermata Home'.</p>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -334,7 +336,7 @@
                 installPopup.classList.add('show');
                 setTimeout(() => {
                     installPopup.classList.remove('show');
-                }, 15000); // Nasconde il pop-up dopo 15 secondi
+                }, 10000); // Nasconde il pop-up dopo 10 secondi
             }
 
             // Funzione per nascondere il pop-up
@@ -448,7 +450,7 @@
                 }
             });
 
-            // Nuovo event listener per il pulsante 'Installa iOS App' che ora mostra il pop-up
+            // Nuovo event listener per il pulsante 'Installa App' che ora mostra il pop-up
             installButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 showInstallPopup();
