@@ -21,96 +21,202 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-            position: relative;
+            min-height: 100vh;
+            color: #1f2937;
+            overflow-x: hidden;
         }
 
-        #video-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-
-        #video-player {
-            width: 100%;
-            height: 100%;
-            background-color: #000;
-        }
-
-        #main-button {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #f2f2f2;
-            color: #171717;
-            border: none;
-            border-radius: 9999px;
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 10;
-            transition: all 0.2s ease-in-out;
-        }
-
-        #main-button:hover {
-            background-color: #e5e5e5;
-            transform: translateX(-50%) scale(1.05);
-        }
-
-        .icon {
-            font-size: 2.5rem;
-        }
-
-        .player-controls {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            color: white;
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: opacity 0.3s ease;
-        }
-
-        .volume-container {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .volume-range {
-            width: 80px;
-        }
-
-        /* Fullscreen styles */
-        .full-screen-container {
-            width: 100vw;
-            height: 100vh;
+        /* Stile per la splash screen */
+        .splash-screen {
             position: fixed;
             top: 0;
             left: 0;
-            z-index: 9999;
+            width: 100%;
+            height: 100%;
+            background-color: #f97316;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .splash-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 1rem;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            text-align: center;
+            opacity: 0;
+            /* Nasconde il contenuto finché lo splash screen è attivo */
+            transition: opacity 1s ease-in-out;
+            box-sizing: border-box;
+            /* Assicura che il padding non causi overflow */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            border-radius: 1rem;
+        }
+
+        .container.visible {
+            opacity: 1;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+            /* 16:9 Aspect Ratio */
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background-color: #000000;
+        }
+
+        .video-player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background-color: #000000;
+            border: none;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .app-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            min-width: 150px;
+            /* Assicura che i pulsanti siano abbastanza larghi per il touch */
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .app-button.primary {
+            background-color: #f97316;
+            color: #fff;
+        }
+
+        .app-button.primary:hover {
+            background-color: #ea580c;
+        }
+
+        .app-button.secondary {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .app-button.secondary:hover {
+            background-color: #d1d5db;
+        }
+
+        /* Tema scuro per tutti gli elementi */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1e1e1e;
+                color: #e5e7eb;
+            }
+
+            .container {
+                background-color: #1e1e1e;
+                box-shadow: 0 4px 10px rgba(255, 255, 255, 0.05);
+            }
+
+            .app-button.secondary {
+                background-color: #374151;
+                color: #d1d5db;
+            }
+
+            .app-button.secondary:hover {
+                background-color: #4b5563;
+            }
+        }
+
+        .footer {
+            margin-top: 2rem;
+            padding: 1rem;
+            text-align: center;
+            color: #9ca3af;
+        }
+
+        .footer-icons a {
+            font-size: 1.5rem;
+            margin: 0 0.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-icons a:hover {
+            color: #f97316;
         }
     </style>
 </head>
 
 <body>
-    <div id="video-container">
-        <video id="video-player" playsinline></video>
-        <button id="main-button">
-            <i id="main-icon" class="fa-solid"></i>
-        </button>
+    <div id="splash" class="splash-screen">
+        <h1 class="text-3xl font-bold text-white">ExtraTvLive</h1>
     </div>
 
-    <div id="install-popup" class="fixed inset-x-4 bottom-8 flex flex-col items-center justify-center p-4 bg-white shadow-xl rounded-lg border border-gray-200 z-50 transform scale-100 opacity-100 transition-transform duration-300">
+    <div id="app-container" class="container">
+        <h1 class="text-3xl font-bold text-orange-500">ExtraTvLive</h1>
+        <p class="text-xl font-bold text-gray-600 dark:text-gray-400">Streaming dal vivo, sempre con te.</p>
+
+        <div class="video-container">
+            <video id="video" class="video-player" muted playsinline controls>
+                Il tuo browser non supporta il tag video.
+            </video>
+        </div>
+
+        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">Tocca due volte il video per la modalità Schermo Intero!</p>
+
+        <div class="button-group">
+            <button id="main-button" class="app-button primary">
+                Attiva Audio
+            </button>
+            <button id="pip-button" class="app-button secondary">
+                Entra in PiP
+            </button>
+            <a href="https://www.extratvlive.it/ondemand/" target="_blank" class="app-button secondary">
+                ExtraTvLive+
+            </a>
+        </div>
+
+        <p id="message-display" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></p>
+
+        <div class="footer">
+            <div class="footer-icons mt-2">
+                <a href="https://www.facebook.com/extratvitaly" target="_blank"><i class="fa-brands fa-facebook-square"></i></a>
+                <a href="https://www.instagram.com/extratv_official/" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+                <a href="https://www.youtube.com/@ExtraTvItaly" target="_blank"><i class="fa-brands fa-youtube-square"></i></a>
+            </div>
+            <p class="text-xs mt-2">© 2024 ExtraTv Live. Tutti i diritti riservati.</p>
+        </div>
+    </div>
+
+    <div id="install-popup" class="fixed inset-x-4 bottom-8 flex flex-col items-center justify-center p-4 bg-white shadow-xl rounded-lg border border-gray-200 z-50 transform scale-0 opacity-0 transition-transform duration-300">
         <div class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 cursor-pointer text-2xl" onclick="hideInstallPopup()">
             <i class="fa-solid fa-xmark"></i>
         </div>
@@ -130,39 +236,119 @@
         </div>
     </div>
 
-
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const video = document.getElementById('video-player');
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('video');
             const mainButton = document.getElementById('main-button');
-            const mainIcon = document.getElementById('main-icon');
-            const installPopup = document.getElementById('install-popup');
-            let isPaused = true;
+            const pipButton = document.getElementById('pip-button');
+            const messageDisplay = document.getElementById('message-display');
+            const splashScreen = document.getElementById('splash');
+            const appContainer = document.getElementById('app-container');
+            const installPopup = document.getElementById('install-popup'); // Aggiunto il popup
 
+            // Logica per nascondere il pulsante PiP su iOS in modalità standalone
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isStandalone = (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone);
+
+            if (isIOS && isStandalone) {
+                pipButton.style.display = 'none';
+            }
+            
+            // URL del flusso video
+            const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+            let hls;
+
+            // Registra il service worker per il supporto PWA
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/service-worker.js').then(registration => {
+                        console.log('Service Worker registrato con successo:', registration.scope);
+                    }).catch(error => {
+                        console.log('Registrazione del Service Worker fallita:', error);
+                    });
+                });
+            }
+            
+            // Funzione per mostrare il contenuto dell'app dopo lo splash screen
+            function showApp() {
+                splashScreen.classList.add('hidden');
+                appContainer.classList.add('visible');
+            }
+
+            setTimeout(showApp, 2000);
+
+            // Funzione per mostrare un messaggio temporaneo
+            function showMessage(msg, duration = 3000) {
+                messageDisplay.textContent = msg;
+                setTimeout(() => {
+                    messageDisplay.textContent = '';
+                }, duration);
+            }
+
+            // Funzione per aggiornare il testo del pulsante principale
             function updateMainButton() {
-                if (video.paused) {
-                    mainIcon.classList.remove('fa-pause');
-                    mainIcon.classList.add('fa-play');
+                if (video.muted) {
+                    mainButton.textContent = 'Attiva Audio';
                 } else {
-                    mainIcon.classList.remove('fa-play');
-                    mainIcon.classList.add('fa-pause');
+                    mainButton.textContent = 'Disattiva Audio';
                 }
             }
 
-            mainButton.addEventListener('click', function() {
-                if (video.paused) {
-                    video.play();
-                } else {
-                    video.pause();
+            // Funzione per caricare il video con hls.js
+            function loadVideo() {
+                if (hls) {
+                    hls.destroy();
                 }
-            });
+                hls = new Hls();
+                hls.loadSource(videoUrl);
+                hls.attachMedia(video);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play().then(() => {
+                        updateMainButton();
+                    }).catch(error => {
+                        console.error("Play failed:", error);
+                        showMessage("Riproduzione automatica fallita. Premi il pulsante per avviare.");
+                        mainButton.textContent = 'Avvia Riproduzione';
+                        mainButton.removeEventListener('click', toggleMute);
+                        mainButton.addEventListener('click', manualPlay, {
+                            once: true
+                        });
+                    });
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('HLS.js error:', data);
+                    if (data.fatal) {
+                        showMessage(`Errore di streaming: ${data.details}. Riavvio in corso...`);
+                        setTimeout(() => loadVideo(), 1000);
+                    }
+                });
+            }
+            
+            // Funzione per avviare la riproduzione manualmente
+            function manualPlay() {
+                video.play().then(() => {
+                    video.muted = false;
+                    updateMainButton();
+                    mainButton.removeEventListener('click', manualPlay);
+                    mainButton.addEventListener('click', toggleMute);
+                }).catch(error => {
+                    console.error("Manual play failed:", error);
+                    showMessage("Riproduzione fallita. Il browser ha bloccato l'azione.");
+                });
+            }
+
+            // Funzione per attivare/disattivare l'audio
+            function toggleMute() {
+                video.muted = !video.muted;
+                updateMainButton();
+            }
 
             // Mostra il popup di installazione solo su iOS Safari
             function showInstallPopup() {
-                const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
                 const isSafari = navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome');
-                const isStandalone = (window.matchMedia('(display-mode: standalone)').matches);
-                if (isIos && isSafari && !isStandalone) {
+                if (isIOS && isSafari && !isStandalone) {
                     installPopup.classList.remove('opacity-0', 'scale-0');
                     installPopup.classList.add('opacity-100', 'scale-100');
                 }
@@ -173,8 +359,53 @@
                 installPopup.classList.add('opacity-0', 'scale-0');
             }
 
-            // Mostra il popup dopo 3 secondi per dare tempo alla pagina di caricarsi
-            setTimeout(showInstallPopup, 3000);
+            if (Hls.isSupported()) {
+                loadVideo();
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Fallback per il supporto nativo in Safari
+                video.src = videoUrl;
+                video.play().catch(error => {
+                    console.error("Autoplay failed on native player:", error);
+                    showMessage("Riproduzione automatica fallita. Premi il pulsante per avviare.");
+                    mainButton.textContent = 'Avvia Riproduzione';
+                    mainButton.removeEventListener('click', toggleMute);
+                    mainButton.addEventListener('click', manualPlay, {
+                        once: true
+                    });
+                });
+            } else {
+                showMessage('Il tuo browser non supporta lo streaming HLS.');
+            }
+
+            // Event listener per il pulsante principale
+            mainButton.addEventListener('click', toggleMute);
+
+            // Event listener per il pulsante PiP
+            pipButton.addEventListener('click', () => {
+                // Assicurati che il video stia riproducendo prima di provare il PiP
+                if (document.pictureInPictureEnabled) {
+                    if (document.pictureInPictureElement) {
+                        document.exitPictureInPicture().catch(error => {
+                            console.error("Exit PiP failed:", error);
+                        });
+                    } else {
+                        // Se il video è in pausa, prova a riprodurlo prima
+                        if (video.paused) {
+                            video.play().catch(error => {
+                                console.error("Play failed before PiP request:", error);
+                                showMessage("Impossibile riprodurre il video. Riprova.");
+                                return;
+                            });
+                        }
+                        video.requestPictureInPicture().catch(error => {
+                            console.error("PiP failed:", error);
+                            showMessage("Impossibile entrare in modalità Schermo-in-Schermo. Riprova più tardi.");
+                        });
+                    }
+                } else {
+                    showMessage("Il PiP non è supportato dal tuo dispositivo.");
+                }
+            });
 
             // Aggiungi un event listener per il doppio tocco
             let lastClickTime = 0;
