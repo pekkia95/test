@@ -172,7 +172,7 @@
         /* Stile per il pop-up di installazione */
         #install-popup {
             position: fixed;
-            bottom: 60px; /* Posiziona sopra la barra di navigazione di Safari */
+            bottom: 60px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -194,6 +194,12 @@
         #install-popup.show {
             opacity: 1;
             visibility: visible;
+        }
+
+        .share-icon-svg {
+            width: 3rem; /* Ridimensionato a 48px */
+            height: 3rem;
+            color: #4b5563; /* Colore più neutro */
         }
     </style>
 </head>
@@ -246,7 +252,7 @@
         <p class="text-center font-bold text-lg">Installa l'app ExtraTvLive</p>
         <p class="text-center text-sm">1. Tocca l'icona di condivisione <br/> nella barra di navigazione di Safari.</p>
         <div class="text-center my-4">
-            <svg class="h-16 w-16 text-gray-700 mx-auto" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg class="share-icon-svg" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 21H5a2 2 0 01-2-2V9a2 2 0 012-2h3V5a2 2 0 012-2h4a2 2 0 012 2v2h3a2 2 0 012 2v10a2 2 0 01-2 2zM5 9v10h14V9h-3V7a2 2 0 01-2-2H10a2 2 0 01-2 2v2H5zM12 11a1 1 0 00-1 1v4a1 1 0 002 0v-4a1 1 0 00-1-1zm0 2a1 1 0 01-1 1v1a1 1 0 012 0v-1a1 1 0 01-1-1z" clip-rule="evenodd" fill-rule="evenodd"/>
             </svg>
         </div>
