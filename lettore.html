@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lettore Video Live</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .video-container {
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            padding-top: 56.25%; /* Rapporto 16:9 */
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .video-player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+        }
+        #audio-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            background-color: #f97316;
+            color: #fff;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #audio-button:hover {
+            background-color: #ea580c;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="video-container">
+        <video id="video" class="video-player" playsinline controls autoplay muted>
+            Il tuo browser non supporta il tag video.
+        </video>
+    </div>
+
+    <button id="audio-button">Attiva Audio</button>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('video');
+            const audioButton = document.getElementById('audio-button');
+            const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
+
+            // Funzione per caricare il video
+            function loadVideo() {
+                if (Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(videoUrl);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        video.play().catch(e => console.error("Autoplay failed:", e));
+                    });
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        if (data.fatal) {
+                            console.error('HLS.js fatal error:', data);
+                            setTimeout(() => loadVideo(), 1000); // Riavvia in caso di errore
+                        }
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = videoUrl;
+                    video.addEventListener('loadedmetadata', () => {
+                        video.play().catch(e => console.error("Native autoplay failed:", e));
+                    });
+                } else {
+                    console.error('Il tuo browser non supporta lo streaming HLS.');
+                }
+            }
+            
+            // Attiva l'audio al clic del pulsante
+            audioButton.addEventListener('click', () => {
+                if (video.muted) {
+                    video.muted = false;
+                    audioButton.textContent = 'Disattiva Audio';
+                } else {
+                    video.muted = true;
+                    audioButton.textContent = 'Attiva Audio';
+                }
+            });
+
+            // Avvia il caricamento del video
+            loadVideo();
+        });
+    </script>
+</body>
+</html>
