@@ -1,8 +1,9 @@
 <div style="position: relative; width: 100%; padding-top: 56.25%;">
     <video id="video-player" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" playsinline controls autoplay muted></video>
 </div>
-<div style="text-align: center; margin-top: 10px;">
+<div style="text-align: center; margin-top: 10px; display: flex; justify-content: center; gap: 10px;">
     <button id="toggle-audio-btn" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #f97316; color: white; border: none; border-radius: 5px;">Attiva Audio</button>
+    <button id="pip-btn" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #e5e7eb; color: #4b5563; border: none; border-radius: 5px;">Entra in PiP</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -10,6 +11,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const video = document.getElementById('video-player');
         const audioButton = document.getElementById('toggle-audio-btn');
+        const pipButton = document.getElementById('pip-btn');
         const videoUrl = "https://rst2.saiuzwebnetwork.it:8081/extratvlive/index.m3u8";
 
         // Funzione per caricare il video
@@ -39,6 +41,22 @@
             } else {
                 video.muted = true;
                 audioButton.textContent = 'Attiva Audio';
+            }
+        });
+
+        // Entra/Esci dalla modalità Picture-in-Picture
+        pipButton.addEventListener('click', () => {
+            if (document.pictureInPictureEnabled) {
+                if (document.pictureInPictureElement) {
+                    document.exitPictureInPicture().catch(e => console.error("Exit PiP failed:", e));
+                } else {
+                    if (video.paused) {
+                        video.play().catch(e => console.error("Play failed before PiP:", e));
+                    }
+                    video.requestPictureInPicture().catch(e => console.error("PiP failed:", e));
+                }
+            } else {
+                alert('La modalità Picture-in-Picture non è supportata dal tuo browser.');
             }
         });
 
